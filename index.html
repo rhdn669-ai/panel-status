@@ -517,7 +517,7 @@ const getFiltered=()=>panels.filter(p=>{
 
 /* ─────────────────── 렌더 ─────────────────── */
 function render(){
-  panels.sort((a,b)=>(a.납기||"9999").localeCompare(b.납기||"9999"));
+  panels.sort((a,b)=>(a.납기||"9999").localeCompare(b.납기||"9999")||(a.호기||"").localeCompare(b.호기||"",undefined,{numeric:true}));
   const filtered=getFiltered();
   const an=allNapgi(),apg=allProjGrps();
 
@@ -1253,8 +1253,8 @@ function parsePhotoText(text){
   <pre style="font-size:10px;color:#718096;background:#f7f9fc;padding:8px;border-radius:6px;max-height:120px;overflow:auto;white-space:pre-wrap;margin-top:6px">${text.replace(/</g,'&lt;')}</pre></details>`;
 
   resultEl.innerHTML=html;
-  // 납기 우선 정렬
-  parsed.sort((a,b)=>(a.납||"9999").localeCompare(b.납||"9999"));
+  // 납기 우선 정렬, 동일 납기 내 호기수 순
+  parsed.sort((a,b)=>(a.납||"9999").localeCompare(b.납||"9999")||(a.호||"").localeCompare(b.호||"",undefined,{numeric:true}));
   pendingPhotoRows=parsed;
   document.getElementById("photo-confirm").style.display="inline-flex";
 }
@@ -1326,8 +1326,8 @@ function confirmPhotoImport(){
     }
   });
   console.log(`추가: ${added}건, 업데이트: ${updated}건`);
-  // 납기 우선 정렬
-  panels.sort((a,b)=>(a.납기||"9999").localeCompare(b.납기||"9999"));
+  // 납기 우선 정렬, 동일 납기 내 호기수 순
+  panels.sort((a,b)=>(a.납기||"9999").localeCompare(b.납기||"9999")||(a.호기||"").localeCompare(b.호기||"",undefined,{numeric:true}));
   isSyncing=true;
   save();render();closePhoto();
   setTimeout(()=>{isSyncing=false;},3000);
