@@ -1,0 +1,1517 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>판넬 생산현황</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;font-size:14px;font-family:-apple-system,'Noto Sans KR',sans-serif;background:#f4f6f9;color:#1a202c;-webkit-tap-highlight-color:transparent}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:#d1d9e0;border-radius:10px}
+button{cursor:pointer;font-family:inherit;transition:all .15s}
+button:active{transform:scale(.97)}
+input,select,textarea{font-family:inherit}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#667eea!important;box-shadow:0 0 0 3px rgba(102,126,234,.12)}
+
+/* layout */
+#app{height:100vh;display:flex;flex-direction:column;overflow:hidden}
+#header{flex-shrink:0;background:#fff;border-bottom:1px solid #edf2f7;padding:0 16px;display:flex;align-items:center;justify-content:space-between;height:50px;box-shadow:0 1px 8px rgba(0,0,0,.06);z-index:100}
+#filters{flex-shrink:0;background:#f4f6f9;padding:8px 16px;border-bottom:1px solid #edf2f7;display:flex;flex-direction:column;gap:7px}
+#content{flex:1;overflow-y:auto;overflow-x:auto;padding:0 16px 12px}
+
+/* card */
+.card{background:#fff;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);border:1px solid rgba(0,0,0,.05)}
+
+/* badge */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap}
+
+/* table */
+#tbl{width:100%;border-collapse:collapse;min-width:820px;table-layout:fixed}
+#tbl thead th{padding:9px 10px;text-align:left;font-size:11px;font-weight:600;color:#a0aec0;white-space:nowrap;background:#fff;position:sticky;top:0;z-index:10;box-shadow:0 1px 0 #edf2f7}
+#tbl tbody tr{border-bottom:1.5px solid #e2e8f0;cursor:pointer;transition:background .1s}
+#tbl tbody tr:hover td{background:#f0f4ff!important}
+#tbl tbody td{padding:8px 10px;vertical-align:middle}
+
+/* progress */
+.prog-track{flex:1;height:6px;background:#edf2f7;border-radius:10px;overflow:hidden}
+.prog-fill{height:100%;border-radius:10px;transition:width .5s}
+
+/* task btn */
+.task-btn{flex:1;padding:6px 0;border-radius:7px;font-size:12px;border:1.5px solid #e2e8f0;background:#fff;color:#a0aec0;font-weight:500}
+.task-btn:hover{border-color:#cbd5e0;color:#718096}
+.task-btn.active{font-weight:700}
+
+/* modal */
+.overlay{position:fixed;inset:0;z-index:1000;background:rgba(15,20,30,.45);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px}
+.modal-box{background:#fff;border-radius:20px;width:min(95vw,100%);max-height:95vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-left{width:400px;flex-shrink:0;border-right:1px solid #f0f4f8;overflow-y:auto;padding:20px 18px;display:flex;flex-direction:column;gap:14px;background:#fafbfd}
+.modal-mid{flex:1;border-right:1px solid #f0f4f8;overflow-y:auto;padding:20px 18px}
+.modal-right{flex:1;overflow-y:auto;padding:20px 18px}
+
+/* dropzone */
+.dropzone{border:2px dashed #c3dafe;border-radius:14px;padding:28px;text-align:center;background:#f0f4ff;cursor:pointer;transition:all .2s}
+.dropzone:hover,.dropzone.drag{border-color:#667eea;background:#e8efff}
+
+/* btn */
+.btn{display:inline-flex;align-items:center;justify-content:center;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;border:1.5px solid transparent}
+.btn-ghost{background:#fff;color:#4a5568;border-color:#e2e8f0}
+.btn-primary{background:#1a202c;color:#fff;border-color:#1a202c}
+
+
+@media(max-width:600px){
+  .modal-box{flex-direction:column}
+  .modal-left,.modal-mid{width:100%;border-right:none;border-bottom:1px solid #f0f4f8}
+}
+
+@media print {
+  body { overflow: visible !important; background: #fff !important; }
+  #app { height: auto !important; overflow: visible !important; }
+  #header { box-shadow: none !important; position: relative !important; }
+  #filters { display: none !important; }
+  #content { overflow: visible !important; padding: 0 !important; }
+  #table-wrap { box-shadow: none !important; border: none !important; border-radius: 0 !important; }
+  #tbl { min-width: 100% !important; font-size: 10px !important; }
+  #tbl thead th { font-size: 9px !important; padding: 5px 6px !important; position: static !important; }
+  #tbl tbody td { padding: 5px 6px !important; }
+  .overlay { display: none !important; }
+  #btn-pdf, #btn-photo, #btn-table, #btn-defect { display: none !important; }
+  #print-title { display: block !important; }
+  .prog-track { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .prog-fill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; border: 1px solid #ccc !important; }
+  tr { page-break-inside: avoid; }
+}
+#print-title { display: none; font-size: 13px; font-weight: 600; color: #718096; margin-bottom: 4px; padding: 0 16px; }
+</style>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body>
+<div id="app">
+  <div id="header">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;font-size:14px">🏭</div>
+      <div>
+        <div style="font-size:14px;font-weight:700;letter-spacing:-.2px">판넬 생산현황</div>
+        <div id="hdr-sub" style="font-size:10px;color:#a0aec0;margin-top:1px"></div>
+        <div id="hdr-update" style="font-size:10px;color:#c3dafe;margin-top:1px"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <button id="btn-defect" class="btn" style="padding:5px 10px;font-size:12px;border:1.5px solid #fed7e2;background:#fff5f7;color:#b83280">🔎 불량현황</button>
+      <button id="btn-photo" class="btn" style="padding:5px 10px;font-size:12px;border:1.5px solid #c3dafe;background:#ebf4ff;color:#3182ce">📷 사진추가</button>
+      <button id="btn-pdf" class="btn" style="padding:5px 10px;font-size:12px;border:1.5px solid #fed7d7;background:#fff5f5;color:#c53030">🖨 PDF</button>
+      <button id="btn-table" class="btn" style="padding:5px 10px;font-size:12px;border:none;background:#667eea;color:#fff">목록</button>
+    </div>
+  </div>
+  <div id="filters">
+    <div id="napgi-row" style="display:flex;gap:4px;flex-wrap:wrap;align-items:center"></div>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <div id="status-row" style="display:flex;gap:4px;flex-wrap:wrap;flex:1"></div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <div style="position:relative">
+          <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:#a0aec0;font-size:12px;pointer-events:none">🔍</span>
+          <input id="search" placeholder="프로젝트/호기..." oninput="searchQ=this.value;render();" style="padding:4px 8px 4px 24px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:12px;width:140px;background:#fff"/>
+        </div>
+        <select id="napgi-sel" style="padding:4px 8px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:12px;background:#fff"></select>
+        <span id="count-lbl" style="font-size:11px;color:#a0aec0;white-space:nowrap"></span>
+      </div>
+    </div>
+  </div>
+  <div id="print-title"></div>
+  <div id="content">
+    <div id="table-wrap">
+        <table id="tbl">
+          <colgroup>
+            <col style="width:4px"><col style="width:28px"><col style="width:82px"><col style="width:58px"><col style="width:30px">
+            <col style="width:36px"><col style="width:48px"><col style="width:58px"><col style="width:58px">
+            <col style="width:78px"><col style="width:58px"><col style="width:52px"><col style="width:58px"><col style="width:52px"><col style="width:90px"><col style="width:68px"><col style="width:68px">
+          </colgroup>
+          <thead><tr id="tbl-head"></tr></thead>
+          <tbody id="tbl-body"></tbody>
+        </table>
+    </div>
+  </div>
+</div>
+
+<!-- 상세 모달 -->
+<div id="modal" class="overlay" style="display:none">
+  <div class="modal-box" id="modal-box">
+    <div id="modal-stripe" style="height:4px;flex-shrink:0"></div>
+    <div style="display:flex;flex:1;overflow:hidden;min-height:0">
+      <div class="modal-left" id="modal-left"></div>
+      <div class="modal-mid" id="modal-mid"></div>
+      <div class="modal-right" id="modal-right"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 엑셀 모달 -->
+<!-- 사진 추가 모달 -->
+<div id="photo-modal" class="overlay" style="display:none">
+  <div class="modal-box" style="max-width:98vw;width:1500px;max-height:95vh;padding:0;display:flex;flex-direction:column" onclick="event.stopPropagation()">
+    <div style="padding:20px 24px 6px;flex-shrink:0">
+    <div style="font-size:17px;font-weight:700;margin-bottom:6px">📷 사진으로 프로젝트 추가</div>
+    <div style="font-size:12px;color:#718096;margin-bottom:8px">엑셀 캡처 사진을 넣으면 자동으로 프로젝트를 인식합니다</div>
+    <div style="background:#f7f9fc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:700;color:#2d3748;margin-bottom:8px">📋 사진 컬럼 순서 (좌→우)</div>
+      <div style="display:flex;gap:6px;flex-wrap:nowrap">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font-size:13px;padding:4px 10px;border-radius:6px;background:#ebf4ff;color:#3182ce;font-weight:700;border:1px solid #bee3f8">①호기</span>
+          <span style="font-size:10px;color:#3182ce;font-weight:600">→ 뒷3자리</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font-size:13px;padding:4px 10px;border-radius:6px;background:#fef3c7;color:#975a16;font-weight:700;border:1px solid #fbd38d">②납입처</span>
+          <span style="font-size:10px;color:#975a16;font-weight:600">→ 납입처</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font-size:13px;padding:4px 10px;border-radius:6px;background:#e0e7ff;color:#4338ca;font-weight:700;border:1px solid #a5b4fc">③프로젝트</span>
+          <span style="font-size:10px;color:#4338ca;font-weight:600">→ 프로젝트</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font-size:13px;padding:4px 10px;border-radius:6px;background:#fce7f3;color:#be185d;font-weight:700;border:1px solid #f9a8d4">④방향</span>
+          <span style="font-size:10px;color:#be185d;font-weight:600">→ 정역</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font-size:13px;padding:4px 10px;border-radius:6px;background:#d1fae5;color:#065f46;font-weight:700;border:1px solid #6ee7b7">⑤제작</span>
+          <span style="font-size:10px;color:#065f46;font-weight:600">→ 제작</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font-size:13px;padding:4px 10px;border-radius:6px;background:#ffedd5;color:#9a3412;font-weight:700;border:1px solid #fdba74">⑥자재필요</span>
+          <span style="font-size:10px;color:#9a3412;font-weight:600">→ 자재입고</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font-size:13px;padding:4px 10px;border-radius:6px;background:#e2e8f0;color:#718096;font-weight:600">⑦조립START</span>
+          <span style="font-size:10px;color:#a0aec0">미사용</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font-size:13px;padding:4px 10px;border-radius:6px;background:#fed7d7;color:#c53030;font-weight:700;border:1px solid #feb2b2">⑧IO CHECK</span>
+          <span style="font-size:10px;color:#c53030;font-weight:600">→ 납기(-14d) 턴온(-1d)</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font-size:13px;padding:4px 10px;border-radius:6px;background:#e2e8f0;color:#a0aec0;font-weight:600">⑨조정</span>
+          <span style="font-size:10px;color:#a0aec0">미사용</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font-size:13px;padding:4px 10px;border-radius:6px;background:#e2e8f0;color:#a0aec0;font-weight:600">⑩입고검수</span>
+          <span style="font-size:10px;color:#a0aec0">미사용</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font-size:13px;padding:4px 10px;border-radius:6px;background:#e2e8f0;color:#a0aec0;font-weight:600">⑪출하검수</span>
+          <span style="font-size:10px;color:#a0aec0">미사용</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font-size:13px;padding:4px 10px;border-radius:6px;background:#e2e8f0;color:#a0aec0;font-weight:600">⑫포장</span>
+          <span style="font-size:10px;color:#a0aec0">미사용</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font-size:13px;padding:4px 10px;border-radius:6px;background:#e2e8f0;color:#a0aec0;font-weight:600">⑬출하</span>
+          <span style="font-size:10px;color:#a0aec0">미사용</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font-size:13px;padding:4px 10px;border-radius:6px;background:#ebf4ff;color:#3182ce;font-weight:700;border:1px solid #bee3f8">⑭TESTER</span>
+          <span style="font-size:10px;color:#3182ce;font-weight:600">→ 자재구분</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font-size:13px;padding:4px 10px;border-radius:6px;background:#e2e8f0;color:#a0aec0;font-weight:600">⑮DRAM/HBM</span>
+          <span style="font-size:10px;color:#a0aec0">미사용</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+          <span style="font-size:13px;padding:4px 10px;border-radius:6px;background:#e2e8f0;color:#a0aec0;font-weight:600">⑯CHUCK</span>
+          <span style="font-size:10px;color:#a0aec0">미사용</span>
+        </div>
+      </div>
+    </div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:0 24px 16px">
+    <div id="photo-dropzone" class="dropzone">
+      <div style="font-size:32px;margin-bottom:10px">📷</div>
+      <div style="font-size:14px;font-weight:600;color:#4a5568;margin-bottom:4px">드래그 / 클릭 / <span style="color:#667eea">Ctrl+V 붙여넣기</span></div>
+      <div style="font-size:12px;color:#a0aec0">PNG / JPG 스크린샷</div>
+      <input id="photo-file" type="file" accept="image/*" style="display:none"/>
+    </div>
+    <div id="photo-status" style="display:none;margin-top:16px;text-align:center">
+      <div id="photo-spinner" style="display:inline-block;width:28px;height:28px;border:3px solid #e2e8f0;border-top:3px solid #667eea;border-radius:50%;animation:spin 1s linear infinite"></div>
+      <div id="photo-status-text" style="font-size:13px;color:#667eea;font-weight:600;margin-top:8px">텍스트 인식 중...</div>
+      <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+    </div>
+    <div id="photo-preview" style="display:none;margin-top:16px;max-height:200px;overflow:auto;border:1px solid #edf2f7;border-radius:10px">
+      <img id="photo-img" style="width:100%;display:block;border-radius:10px"/>
+    </div>
+    <div id="photo-result" style="display:none;margin-top:16px"></div>
+    </div>
+    <div style="padding:12px 24px;border-top:1px solid #edf2f7;flex-shrink:0;display:flex;justify-content:space-between;background:#fff;border-radius:0 0 20px 20px">
+      <button class="btn btn-ghost" onclick="closePhoto()">취소</button>
+      <button id="photo-confirm" class="btn btn-primary" style="display:none" onclick="confirmPhotoImport()">추가하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 불량현황 모��� -->
+<div id="defect-modal" class="overlay" style="display:none">
+  <div class="modal-box" style="max-width:700px;padding:0" onclick="event.stopPropagation()">
+    <div style="padding:20px 24px 14px;border-bottom:1px solid #edf2f7;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:17px;font-weight:700">🔎 작업자별 불량 현황</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <select id="defect-filter" style="padding:4px 8px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:12px;background:#fff">
+          <option value="all">전체</option>
+          <option value="open">미완료만</option>
+          <option value="done">완료만</option>
+        </select>
+        <button onclick="closeDefectModal()" style="background:none;border:none;font-size:18px;color:#a0aec0;cursor:pointer;padding:2px 6px">✕</button>
+      </div>
+    </div>
+    <div id="defect-body" style="padding:16px 24px;overflow-y:auto;max-height:70vh"></div>
+  </div>
+</div>
+
+<script>
+
+
+/* ─── 납기/턴온 인라인 편집 ─── */
+function editDate(field){
+  const p=panels.find(x=>x.id===currentId); if(!p) return;
+  const cur=field==="납기"?p.납기:field==="자재입고"?(p.자재입고||""):p.턴온;
+  const displayEl=document.getElementById("date-"+field+"-display");
+  if(!displayEl) return;
+
+  // input 생성
+  const inp=document.createElement("input");
+  inp.type="date";
+  inp.value=cur;
+  inp.style.cssText="width:100%;padding:4px 6px;border-radius:6px;border:1.5px solid #667eea;font-size:13px;font-weight:700;background:#fff;box-shadow:0 0 0 3px rgba(102,126,234,.15)";
+
+  const parent=displayEl.parentNode;
+  parent.replaceChild(inp,displayEl);
+  inp.focus();
+
+  const commit=()=>{
+    const val=inp.value;
+    if(val&&val!==cur){
+      updatePanel(currentId,p=>field==="납기"?{...p,납기:val}:field==="자재입고"?{...p,자재입고:val}:{...p,턴온:val});
+    } else {
+      renderModal();
+    }
+  };
+  inp.addEventListener("change",commit);
+  inp.addEventListener("blur",commit);
+  inp.addEventListener("keydown",e=>{if(e.key==="Enter")inp.blur(); if(e.key==="Escape"){inp.value=cur;inp.blur();}});
+}
+
+/* ─────────────────── 상수 ─────────────────── */
+const STATUS_CFG={
+  대기중:  {color:"#718096",bg:"#f7fafc",border:"#e2e8f0",dot:"#a0aec0"},
+  제작중:  {color:"#c05621",bg:"#fffaf0",border:"#fbd38d",dot:"#ed8936"},
+  보류:    {color:"#c53030",bg:"#fff5f5",border:"#feb2b2",dot:"#fc8181"},
+  검수대기:{color:"#553c9a",bg:"#faf5ff",border:"#d6bcfa",dot:"#9f7aea"},
+  검수완료:{color:"#0987a0",bg:"#e6fffa",border:"#81e6d9",dot:"#38b2ac"},
+  출고완료:{color:"#276749",bg:"#f0fff4",border:"#9ae6b4",dot:"#48bb78"},
+  출고숨김:{color:"#718096",bg:"#edf2f7",border:"#cbd5e0",dot:"#a0aec0"},
+};
+const STATUS_ORDER=Object.keys(STATUS_CFG);
+const TS={
+  대기:  {dot:"#a0aec0",bg:"#f7fafc",color:"#718096",border:"#e2e8f0"},
+  진행중:{dot:"#ed8936",bg:"#fffaf0",color:"#c05621",border:"#fbd38d"},
+  완료:  {dot:"#48bb78",bg:"#f0fff4",color:"#276749",border:"#9ae6b4"},
+  문제:  {dot:"#fc8181",bg:"#fff5f5",color:"#c53030",border:"#feb2b2"},
+};
+const TASK_STATES=["대기","진행중","완료","문제"];
+const PROJ_COLORS=["#667eea","#48bb78","#ed8936","#ed64a6","#4299e1","#38b2ac"];
+const NAPGI_COLORS=["#667eea","#4299e1","#48bb78","#ed8936","#e53e3e","#9f7aea","#0bc5ea","#dd6b20"];
+const BUPMOK=["P/W BOX","LODER","S/D","H/T상","H/T하","ROBOT"];
+const JAIP=["판금","하네스","사급","도급"];
+const MP_SUBS=["MAIN","PLC","I/O","드라이브","INV","CN","BORAD","EMS","SWITCH","V메타"];
+const STORAGE_KEY="panels_v11";
+
+/* ─────────────────── 초기 데이터 ─────────────────── */
+const RAW=[];
+
+/* ─────────────────── 로직 ─────────────────── */
+const getProjGroup=p=>String(p).replace(/[_-]\d+$/,"");
+const rawToState=r=>{
+  if(!r||r==="-") return"대기";
+  const s=String(r).trim();
+  if(s===".") return"대기";
+  if(s.includes("X")) return"문제";
+  if(s==="DH조립"||s==="JLT") return"진행중";
+  if(s.startsWith("O")) return"완료";
+  return"대기";
+};
+const rawToMpState=r=>{
+  if(!r||r==="-"||r==="nan") return"대기";
+  const s=String(r).trim();
+  if(s.includes("X")) return"문제";
+  if(s.startsWith("O")) return"완료";
+  return"대기";
+};
+const deriveMpState=mp=>{
+  const v=MP_SUBS.map(k=>mp[k]||"대기");
+  if(v.some(s=>s==="문제")) return"문제";
+  if(v.some(s=>s==="진행중")) return"진행중";
+  if(v.every(s=>s==="완료")) return"완료";
+  return"대기";
+};
+const recompute=p=>{
+  const mpS=deriveMpState(p.mp하위상태||{});
+  const all=[...BUPMOK.map(b=>p.부품상태[b]),mpS];
+  const done=all.filter(s=>s==="완료").length;
+  const hasIssue=all.some(s=>s==="문제");
+  const hasProgress=all.some(s=>s==="진행중"||s==="완료");
+  const progress=Math.round(done/all.length*100);
+  let os;
+  if(p.insp2done) os="출고숨김";
+  else if(p.출고완료) os="출고완료";
+  else if(p.검수완료) os="검수완료";
+  else if(hasIssue) os="보류";
+  else if(done===all.length) os="검수대기";
+  else if(hasProgress) os="제작중";
+  else os="대기중";
+  return{...p,progress,overallStatus:os};
+};
+const buildPanel=d=>{
+  const bp=d.부||{};
+  const 부품상태=Object.fromEntries(BUPMOK.map(b=>[b,rawToState(bp[b])]));
+  const mp하위상태=Object.fromEntries(MP_SUBS.map(k=>[k,"대기"]));
+  const 자재입고상태=Object.fromEntries(JAIP.map(k=>[k,false]));
+  return recompute({id:d.id,프로젝트:d.프||"",자재:d.자||"",기구제작:d.기||"",정역:d.정||"",호기:d.호||"",납기:d.납||"",턴온:d.턴||"",자재입고:"",자재입고상태,부품상태,mp하위상태,검수완료:false,출고완료:false,비고:"",현장메모:"",문제비고:{},이력:[],프로젝트그룹:getProjGroup(d.프||"")});
+};
+const getDday=date=>{
+  if(!date) return 9999;
+  const t=new Date();t.setHours(0,0,0,0);
+  const d=new Date(date);d.setHours(0,0,0,0);
+  return Math.ceil((d-t)/86400000);
+};
+
+/* ─────────────────── 상태 ─────────────────── */
+let panels=RAW.map(buildPanel);
+let filterStatus="전체",filterNapgi="전체",searchQ="",viewMode="table",showUrgent=false,hideShipped=true,showDoneNapgi=false;
+
+/* ─── Firebase 초기화 ─── */
+const fbConfig = {
+  apiKey: "AIzaSyAMb5zWGgCINDaJ4tTEocXNMA_6sTAtnpA",
+  authDomain: "ssgl-f8e78.firebaseapp.com",
+  databaseURL: "https://ssgl-f8e78-default-rtdb.firebaseio.com",
+  projectId: "ssgl-f8e78",
+  storageBucket: "ssgl-f8e78.firebasestorage.app",
+  messagingSenderId: "540697007390",
+  appId: "1:540697007390:web:12f7c24025f5acb220a50f",
+  measurementId: "G-8M88S7RK6K"
+};
+firebase.initializeApp(fbConfig);
+const db = firebase.database();
+const dbRef = db.ref('panels');
+
+let isSyncing = false;
+
+// Firebase 키에서 특수문자 처리
+const encodeKey = k => k.replace(/\//g,'__slash__').replace(/\./g,'__dot__').replace(/\$/g,'__dollar__').replace(/\[/g,'__lb__').replace(/\]/g,'__rb__');
+const decodeKey = k => k.replace(/__slash__/g,'/').replace(/__dot__/g,'.').replace(/__dollar__/g,'$').replace(/__lb__/g,'[').replace(/__rb__/g,']');
+const encodeObj = obj => { const r={}; Object.entries(obj).forEach(([k,v])=>{ r[encodeKey(k)]=v; }); return r; };
+const decodeObj = obj => { const r={}; Object.entries(obj).forEach(([k,v])=>{ r[decodeKey(k)]=v; }); return r; };
+
+const save = () => {
+  const encodeInsp = insp => {
+    if(!insp) return {};
+    const r=JSON.parse(JSON.stringify(insp));
+    ['차1','차2'].forEach(c=>{
+      if(r[c]&&r[c].공정비고){
+        const enc={};
+        Object.entries(r[c].공정비고).forEach(([k,v])=>{ enc[encodeKey(k)]=v; });
+        r[c].공정비고=enc;
+      }
+    });
+    return r;
+  };
+  const arr = panels.map(p=>({id:p.id,프로젝트:p.프로젝트||"",자재:p.자재||"",기구제작:p.기구제작||"",정역:p.정역||"",호기:p.호기||"",납기:p.납기||"",턴온:p.턴온||"",자재입고:p.자재입고||"",자재입고상태:p.자재입고상태||{},비고:p.비고||"",부품상태:encodeObj(p.부품상태),mp하위상태:encodeObj(p.mp하위상태),검수완료:p.검수완료,출고완료:p.출고완료,insp2done:p.insp2done||false,현장메모:p.현장메모||"",문제비고:encodeObj(p.문제비고||{}),이력:p.이력||[],검수:encodeInsp(p.검수)}));
+  const obj = {};
+  arr.forEach(p => { obj['p'+p.id] = p; });
+  dbRef.set(obj).catch(e=>console.error('FB save error',e));
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(panels.map(p=>({id:p.id,프로젝트:p.프로젝트||"",자재:p.자재||"",기구제작:p.기구제작||"",정역:p.정역||"",호기:p.호기||"",납기:p.납기||"",턴온:p.턴온||"",자재입고:p.자재입고||"",자재입고상태:p.자재입고상태||{},비고:p.비고||"",부품상태:p.부품상태,mp하위상태:p.mp하위상태,검수완료:p.검수완료,출고완료:p.출고완료,insp2done:p.insp2done||false,현장메모:p.현장메모||"",문제비고:p.문제비고||{},이력:p.이력||[]}))));}catch(e){}
+};
+
+/* 실시간 수신 */
+dbRef.on('value', snapshot => {
+  if(isSyncing) return;
+  const raw = snapshot.val();
+  if(!raw) return;
+  // Firebase는 배열을 객체로 저장 → 다시 배열로 변환
+  const saved = Array.isArray(raw) ? raw : Object.values(raw);
+  if(!saved || saved.length===0) return;
+  isSyncing = true;
+  panels = RAW.map(d => {
+    const base = buildPanel(d), sv = saved.find(x=>x.id===d.id);
+    if(!sv) return base;
+    const decodeInsp = insp => {
+      if(!insp) return {};
+      const r=JSON.parse(JSON.stringify(insp));
+      ['차1','차2'].forEach(c=>{
+        if(r[c]&&r[c].공정비고){
+          const dec={};
+          Object.entries(r[c].공정비고).forEach(([k,v])=>{ dec[decodeKey(k)]=v; });
+          r[c].공정비고=dec;
+        }
+      });
+      return r;
+    };
+    return recompute({...base,부품상태:decodeObj(sv.부품상태||{})||base.부품상태,mp하위상태:decodeObj(sv.mp하위상태||{})||base.mp하위상태,검수완료:sv.검수완료||false,출고완료:sv.출고완료||false,insp2done:sv.insp2done||false,자재입고:sv.자재입고||"",자재입고상태:sv.자재입고상태||{},비고:sv.비고||"",현장메모:sv.현장메모||"",문제비고:decodeObj(sv.문제비고||{}),이력:[],검수:decodeInsp(sv.검수)});
+  });
+  // 임포트로 추가된 패널 (RAW에 없는 것)
+  saved.forEach(sv => {
+    if(!RAW.find(d=>d.id===sv.id) && !panels.find(p=>p.id===sv.id)) {
+      const safe={...sv,프로젝트:sv.프로젝트||"",자재:sv.자재||"",기구제작:sv.기구제작||"",정역:sv.정역||"",호기:sv.호기||"",납기:sv.납기||"",턴온:sv.턴온||"",자재입고:sv.자재입고||"",자재입고상태:sv.자재입고상태||{},비고:sv.비고||"",현장메모:sv.현장메모||"",부품상태:decodeObj(sv.부품상태||{}),mp하위상태:decodeObj(sv.mp하위상태||{}),문제비고:decodeObj(sv.문제비고||{}),이력:sv.이력||[],프로젝트그룹:getProjGroup(sv.프로젝트||"")};
+      panels.push(recompute(safe));
+    }
+  });
+  render();
+  // 다른 기기에서 변경된 경우만 모달 갱신
+  if(currentId){
+    const mp = document.getElementById("modal");
+    if(mp && mp.style.display!=="none") renderModal();
+  }
+  isSyncing = false;
+});
+
+
+
+
+try{showDoneNapgi=localStorage.getItem("showDoneNapgi")==="true";}catch(e){}
+
+/* ─────────────────── 헬퍼 HTML ─────────────────── */
+const allNapgi=()=>[...new Set(panels.map(p=>p.납기).filter(Boolean))].sort();
+const allProjGrps=()=>[...new Set(panels.map(p=>p.프로젝트그룹).filter(Boolean))].sort();
+const projColor=g=>{const i=allProjGrps().indexOf(g);return PROJ_COLORS[i<0?0:i%PROJ_COLORS.length];};
+const napgiColor=n=>{const i=allNapgi().indexOf(n);return NAPGI_COLORS[i<0?0:i%NAPGI_COLORS.length];};
+
+const ddayHtml=(date,os)=>{
+  if(os==="출고숨김") return`<span class="badge" style="background:#edf2f7;color:#718096;border:1px solid #cbd5e0">숨김</span>`;
+  if(os==="출고완료") return`<span class="badge" style="background:#f0fff4;color:#276749;border:1px solid #9ae6b4">출고</span>`;
+  const d=getDday(date);
+  const [c,bg,br]=d<0?["#c53030","#fff5f5","#feb2b2"]:d<=3?["#c05621","#fffaf0","#fbd38d"]:d<=7?["#0987a0","#e6fffa","#81e6d9"]:["#276749","#f0fff4","#9ae6b4"];
+  return`<span class="badge" style="background:${bg};color:${c};border:1px solid ${br};font-size:11px">${d<0?`D+${Math.abs(d)}`:d===0?"D-Day":`D-${d}`}</span>`;
+};
+const statusHtml=os=>{
+  const c=STATUS_CFG[os]||STATUS_CFG["대기중"];
+  return`<span class="badge" style="background:${c.bg};color:${c.color};border:1px solid ${c.border}"><span style="width:6px;height:6px;border-radius:50%;background:${c.dot};display:inline-block;margin-right:4px"></span>${os}</span>`;
+};
+const progHtml=(val,hasIssue,h=6)=>{
+  const fill=hasIssue?"#fc8181":val===100?"#48bb78":"#667eea";
+  return`<div style="display:flex;align-items:center;gap:8px"><div class="prog-track" style="height:${h}px"><div class="prog-fill" style="width:${val}%;background:${fill}"></div></div><span style="font-size:12px;font-weight:600;color:${fill};min-width:30px;text-align:right">${val}%</span></div>`;
+};
+const dotsHtml=(bs,ms)=>{
+  const mpS=deriveMpState(ms||{});
+  return[...BUPMOK.map(b=>bs[b]),mpS].map(s=>{const tc=TS[s]||TS["대기"];return`<span style="width:10px;height:10px;border-radius:50%;background:${tc.dot};display:inline-block;border:1.5px solid ${tc.border}"></span>`;}).join("");
+};
+
+/* ─────────────────── 필터링 ─────────────────── */
+const isDoneNapgiSelected=()=>filterNapgi!=="전체"&&panels.filter(p=>p.납기===filterNapgi).every(p=>p.overallStatus==="출고완료"||p.overallStatus==="출고숨김");
+const getFiltered=()=>panels.filter(p=>{
+  if(p.overallStatus==="출고숨김"&&!isDoneNapgiSelected()&&filterStatus!=="출고숨김") return false;
+  if(filterStatus!=="전체"&&p.overallStatus!==filterStatus) return false;
+  if(filterNapgi!=="전체"&&p.납기!==filterNapgi) return false;
+  if(showUrgent&&(getDday(p.납기)>7||p.overallStatus==="출고완료"||p.overallStatus==="출고숨김")) return false;
+  if(searchQ&&!`${p.프로젝트} ${p.호기} ${p.자재} ${p.기구제작} ${p.비고||""} ${p.정역}`.toLowerCase().includes(searchQ.toLowerCase())) return false;
+  return true;
+});
+
+/* ─────────────────── 렌더 ─────────────────── */
+function render(){
+  panels.sort((a,b)=>(a.납기||"9999").localeCompare(b.납기||"9999"));
+  const filtered=getFiltered();
+  const an=allNapgi(),apg=allProjGrps();
+
+  // 헤더
+  const avgP=Math.round(panels.reduce((a,p)=>a+p.progress,0)/panels.length);
+  document.getElementById("hdr-sub").textContent=`총 ${panels.length}건 · 평균 ${avgP}%`;
+  const now=new Date(),pad=n=>String(n).padStart(2,"0");
+  const upd=now.getFullYear()+"-"+pad(now.getMonth()+1)+"-"+pad(now.getDate())+" "+pad(now.getHours())+":"+pad(now.getMinutes());
+  const updEl=document.getElementById("hdr-update");
+  if(updEl) updEl.textContent="최종 업데이트 "+upd;
+
+  // 납기 행
+  const doneNapgi=an.filter(d=>panels.filter(p=>p.납기===d).every(p=>p.overallStatus==="출고완료"||p.overallStatus==="출고숨김"));
+  const visNapgi=showDoneNapgi?an:an.filter(d=>!doneNapgi.includes(d));
+  let nr=`<button onclick="setNapgi('전체')" style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:10px;font-size:11px;font-weight:700;border:1.5px solid ${filterNapgi==="전체"?"#667eea":"#e2e8f0"};background:${filterNapgi==="전체"?"#667eea":"#fff"};color:${filterNapgi==="전체"?"#fff":"#718096"};cursor:pointer">전체</button>`;
+  visNapgi.forEach(d=>{
+    const idx=an.indexOf(d),c=NAPGI_COLORS[idx%NAPGI_COLORS.length];
+    const gp=panels.filter(p=>p.납기===d),cnt=gp.length;
+    const active=filterNapgi===d,allDone=gp.every(p=>p.overallStatus==="출고완료"||p.overallStatus==="출고숨김");
+    const issN=gp.filter(p=>p.overallStatus==="보류").length;
+    const avgPp=Math.round(gp.reduce((a,p)=>a+p.progress,0)/cnt);
+    const dday=getDday(d),urgent=!allDone&&dday>=0&&dday<=3;
+    const border=active?c:allDone?"#9ae6b4":issN>0?"#feb2b2":"#e2e8f0";
+    const bg=active?c:allDone?"#f0fff4":issN>0?"#fff5f5":"#fff";
+    const color=active?"#fff":allDone?"#276749":issN>0?"#c53030":"#4a5568";
+    const badge=issN>0?`<span style="font-size:10px;background:#fee2e2;color:#c53030;padding:1px 4px;border-radius:4px;font-weight:700">⚠${issN}</span>`:`<span style="font-size:10px;background:#f0fdf4;color:#16a34a;padding:1px 4px;border-radius:4px">✓</span>`;
+    nr+=`<button onclick="setNapgi('${d}')" style="display:inline-flex;flex-direction:column;align-items:stretch;gap:3px;padding:5px 10px 6px 7px;border-radius:10px;font-size:11px;font-weight:600;border:1.5px solid ${border};background:${bg};color:${color};opacity:${allDone&&!active?0.6:1};cursor:pointer">
+      <div style="display:flex;align-items:center;gap:5px">
+        <span style="width:4px;height:12px;border-radius:2px;background:${c};display:inline-block;flex-shrink:0"></span>
+        <span>${allDone?"✓ ":urgent?"⚡ ":""}${d.slice(5)}</span>
+        ${!allDone?badge:""}
+        <span style="opacity:.5;font-size:10px">(${cnt})</span>
+      </div>
+      ${!allDone?`<div style="display:flex;align-items:center;gap:3px"><div style="flex:1;height:3px;background:${active?"rgba(255,255,255,.3)":"#edf2f7"};border-radius:99px;overflow:hidden"><div style="height:100%;width:${avgPp}%;background:${active?"#fff":issN>0?"#fc8181":urgent?"#ed8936":c};border-radius:99px"></div></div><span style="font-size:9px;opacity:.7">${avgPp}%</span></div>`:""}
+    </button>`;
+  });
+  nr+=`<button onclick="toggleDoneNapgi()" style="display:inline-flex;align-items:center;gap:3px;border:1px solid #e2e8f0;border-radius:10px;padding:4px 9px;font-size:10px;font-weight:600;color:${showDoneNapgi?"#276749":"#a0aec0"};background:${showDoneNapgi?"#f0fff4":"#fff"};cursor:pointer">✓ 납기완료 루트 ${doneNapgi.length}건 ${showDoneNapgi?"숨기기":"보기"}</button>`;
+  document.getElementById("napgi-row").innerHTML=nr;
+
+  // 상태 필터
+  const sc=STATUS_ORDER.reduce((a,s)=>({...a,[s]:panels.filter(p=>p.overallStatus===s).length}),{});
+  const total=panels.length,urgent=panels.filter(p=>getDday(p.납기)<=7&&p.overallStatus!=="출고완료"&&p.overallStatus!=="출고숨김").length;
+  const shipped=panels.filter(p=>p.overallStatus==="출고완료"||p.overallStatus==="출고숨김").length;
+  let sr="";
+  [["전체",total,"#2d3748","#edf2f7"],...STATUS_ORDER.map(s=>[s,sc[s]||0,STATUS_CFG[s].color,STATUS_CFG[s].bg])].forEach(([s,n,c,bg])=>{
+    const act=filterStatus===s;
+    sr+=`<button onclick="setStatus('${s}')" style="display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:20px;font-size:12px;font-weight:600;border:none;background:${act?c:bg};color:${act?"#fff":c};cursor:pointer"><span style="font-weight:700">${n}</span><span style="opacity:.85">${s}</span></button>`;
+  });
+  sr+=`<button onclick="toggleUrgent()" style="display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:20px;font-size:12px;font-weight:600;border:none;background:${showUrgent?"#c53030":"#fff5f5"};color:${showUrgent?"#fff":"#c53030"};cursor:pointer"><span style="font-weight:700">${urgent}</span><span>⚡ D-7</span></button>`;
+  if(shipped>0) sr+=`<button onclick="toggleHideShipped()" style="display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:20px;font-size:12px;font-weight:600;border:none;background:${hideShipped?"#edf2f7":"#f0fff4"};color:${hideShipped?"#718096":"#276749"};cursor:pointer"><span style="font-weight:700">${shipped}</span><span>${hideShipped?"↑출고 숨김":"↑출고 표시"}</span></button>`;
+  document.getElementById("status-row").innerHTML=sr;
+
+  // 납기 셀렉트
+  const sel=document.getElementById("napgi-sel");
+  sel.innerHTML=["전체",...an].map(d=>`<option${filterNapgi===d?" selected":""}>${d}</option>`).join("");
+
+  document.getElementById("count-lbl").textContent=filtered.length+"건";
+
+  // 뷰 버튼
+  document.getElementById("btn-table").style.background=viewMode==="table"?"#667eea":"transparent";
+  document.getElementById("btn-table").style.color=viewMode==="table"?"#fff":"#718096";
+  renderTable(filtered);
+}
+
+function renderTable(filtered){
+  document.getElementById("tbl-head").innerHTML=["","#","프로젝트","납입처","정역","제작","호기","자재구분","자재입고예정","입고현황","납기","D-납기","턴온","D-턴온","진행률","공정","상태"].map(h=>`<th>${h}</th>`).join("");
+  const tbody=document.getElementById("tbl-body");
+  if(!filtered.length){tbody.innerHTML=`<tr><td colspan="17" style="text-align:center;padding:32px;color:#a0aec0">항목 없음</td></tr>`;return;}
+  tbody.onclick=e=>{const tr=e.target.closest('tr[data-id]');if(tr)openModal(Number(tr.dataset.id));};
+  tbody.innerHTML=filtered.map(p=>{
+    const nc=napgiColor(p.납기||""),hasIssue=Object.values(p.부품상태||{}).some(s=>s==="문제");
+    const dday=getDday(p.납기),isDone=p.overallStatus==="출고완료"||p.overallStatus==="출고숨김",isOD=dday<0&&!isDone,isUrg=dday>=0&&dday<=3&&!isDone;
+    const pc=projColor(p.프로젝트그룹);
+    // 1차/2차 검수 불량 미해결 감지
+    const insp1=p.검수&&p.검수.차1&&p.검수.차1.공정비고;
+    const insp2=p.검수&&p.검수.차2&&p.검수.차2.공정비고;
+    const defect1Parts=insp1?BUPMOK.filter(b=>{const pb=insp1[b];return pb&&(pb.항목||[]).some(it=>it.내용&&!it.완료);}).join(", "):"";
+    const defect2Parts=insp2?BUPMOK.filter(b=>{const pb=insp2[b];return pb&&(pb.항목||[]).some(it=>it.내용&&!it.완료);}).join(", "):"";
+    const has2ndDefect=!!(defect1Parts||defect2Parts);
+    const defectLabel=[defect1Parts?"1차:"+defect1Parts:"",defect2Parts?"2차:"+defect2Parts:""].filter(Boolean).join(" / ");
+    return`<tr class="data-row" data-id="${p.id}" onclick="openModal(${p.id})" style="cursor:pointer;background:${has2ndDefect?"#fff0f0":isOD?"#fff5f5":isUrg?"#fffaf0":"#fff"};border-left:${has2ndDefect?"4px solid #c53030":"4px solid "+nc}">
+      <td style="padding:0"><div style="width:4px;height:44px;background:${has2ndDefect?"#c53030":nc}"></div></td>
+      <td style="font-size:11px;color:#cbd5e0;font-weight:500">${p.id}</td>
+      <td><div style="font-size:13px;font-weight:700;letter-spacing:-.2px">${p.프로젝트}</div><div style="font-size:10px;color:${pc};font-weight:600;margin-top:1px">${p.프로젝트그룹}</div>${has2ndDefect?`<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px">
+  ${defect1Parts?`<span style="font-size:10px;background:#fee2e2;color:#c53030;padding:2px 6px;border-radius:4px;font-weight:700;border:1px solid #fca5a5">⚠ 1차 ${defect1Parts}</span>`:""}
+  ${defect2Parts?`<span style="font-size:10px;background:#c53030;color:#fff;padding:2px 6px;border-radius:4px;font-weight:700">⚠ 2차 ${defect2Parts}</span>`:""}
+</div>`:""}</td>
+      <td style="font-size:11px;color:#718096;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90px" title="${(p.비고||"").replace(/"/g,'&quot;')}">${p.비고||""}</td>
+      <td><span style="font-size:11px;font-weight:700;padding:2px 6px;border-radius:5px;background:${p.정역==="정"?"#ebf4ff":"#fff5f5"};color:${p.정역==="정"?"#3182ce":"#c53030"};border:1px solid ${p.정역==="정"?"#bee3f8":"#fed7d7"}">${p.정역}</span></td>
+      <td style="font-size:11px;color:#718096">${p.기구제작||""}</td>
+      <td style="font-size:14px;font-weight:800;color:#2d3748" title="${p.호기}">${(p.호기||"").slice(-3)}</td>
+      <td style="font-size:12px;font-weight:700;color:#4a5568">${p.자재}</td>
+      <td><div style="font-size:12px;font-weight:700;color:${nc}">${(p.자재입고||"").slice(5)||"-"}</div></td>
+      <td><div style="display:flex;align-items:center;gap:4px"><div style="display:flex;gap:3px">${JAIP.map(k=>{const done=(p.자재입고상태||{})[k];return`<span title="${k}" style="width:10px;height:10px;border-radius:50%;background:${done?"#48bb78":"#e2e8f0"};display:inline-block;border:1.5px solid ${done?"#9ae6b4":"#cbd5e0"}"></span>`;}).join("")}</div><span style="font-size:10px;font-weight:700;color:${JAIP.filter(k=>(p.자재입고상태||{})[k]).length===JAIP.length?"#276749":"#a0aec0"};margin-left:2px">${JAIP.filter(k=>(p.자재입고상태||{})[k]).length}/${JAIP.length}</span></div></td>
+      <td><div style="font-size:12px;font-weight:700;color:${nc}">${(p.납기||"").slice(5)||"-"}</div></td>
+      <td>${p.납기?ddayHtml(p.납기,p.overallStatus):`<span style="font-size:10px;color:#cbd5e0">-</span>`}</td>
+      <td><div style="font-size:12px;font-weight:700;color:${nc}">${(p.턴온||"").slice(5)||"-"}</div></td>
+      <td>${p.턴온?ddayHtml(p.턴온,p.overallStatus):`<span style="font-size:10px;color:#cbd5e0">-</span>`}</td>
+      <td style="min-width:100px">${progHtml(p.progress,hasIssue)}</td>
+      <td><div style="display:flex;gap:4px">${dotsHtml(p.부품상태,p.mp하위상태)}</div></td>
+      <td>${statusHtml(p.overallStatus)}</td>
+    </tr>`;
+  }).join("");
+}
+
+
+/* ─────────────────── 모달 ─────────────────── */
+let currentId=null, mpOpen=false, modalTab="공정";
+
+function openModal(id){
+  try{
+    currentId=id; mpOpen=false;
+    const modal=document.getElementById("modal");
+    if(!modal){console.error("modal not found");return;}
+    renderModal();
+    modal.style.display="flex";
+  }catch(e){console.error("openModal error:",e);}
+}
+window.openModal=openModal;
+function closeModal(){document.getElementById("modal").style.display="none";currentId=null;}
+document.getElementById("modal").addEventListener("click",function(e){if(e.target===this)closeModal();});
+
+function renderModal(){
+  const p=panels.find(x=>x.id===currentId); if(!p) return;
+  const nc=napgiColor(p.납기||""),pc=projColor(p.프로젝트그룹||"");
+  document.getElementById("modal-stripe").style.background=`linear-gradient(90deg,${pc},${nc})`;
+
+  const appl=[...BUPMOK.map(b=>p.부품상태[b]),deriveMpState(p.mp하위상태||{})];
+  const done=appl.filter(s=>s==="완료").length,hasIssue=appl.some(s=>s==="문제");
+
+  // 왼쪽
+  const _mdone=p.overallStatus==="출고완료"||p.overallStatus==="출고숨김";
+  const _d납=getDday(p.납기||""); const urg납=_d납>=0&&_d납<=3&&!_mdone;
+  const _d턴=getDday(p.턴온||""); const urg턴=_d턴>=0&&_d턴<=3&&!_mdone;
+  document.getElementById("modal-left").innerHTML=`
+    <div>
+      <div style="font-size:19px;font-weight:700">${p.프로젝트}</div>
+      <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap">
+        ${[p.호기,p.기구제작,p.정역,p.자재].map(v=>`<span style="font-size:11px;color:#718096;background:#edf2f7;padding:2px 7px;border-radius:6px">${v}</span>`).join("")}
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <div ondblclick="editDate('납기')" title="더블클릭하여 수정" style="background:${urg납?"#fff5f5":"#fff"};border-radius:10px;padding:10px 12px;border:1px solid ${urg납?"#feb2b2":"#e8ecf2"};cursor:pointer;transition:box-shadow .15s" onmouseenter="this.style.boxShadow='0 2px 8px rgba(102,126,234,.2)'" onmouseleave="this.style.boxShadow='none'">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+          <div style="font-size:11px;font-weight:600;color:${urg납?"#c53030":"#a0aec0"}">납기${urg납?" ⚡":""}</div>
+          <div style="font-size:9px;color:#c3dafe;font-weight:500">✏</div>
+        </div>
+        <div id="date-납기-display" style="font-size:13px;font-weight:700;color:${urg납?"#c53030":"#2d3748"};margin-bottom:5px">${p.납기||"미설정"}</div>
+        ${p.납기?ddayHtml(p.납기,p.overallStatus):""}
+      </div>
+      <div ondblclick="editDate('자재입고')" title="더블클릭하여 수정" style="background:${p.자재입고&&getDday(p.자재입고)<=3&&getDday(p.자재입고)>=0?"#fffaf0":"#fff"};border-radius:10px;padding:10px 12px;border:1px solid ${p.자재입고&&getDday(p.자재입고)<=3&&getDday(p.자재입고)>=0?"#fbd38d":"#e8ecf2"};cursor:pointer;transition:box-shadow .15s" onmouseenter="this.style.boxShadow='0 2px 8px rgba(102,126,234,.2)'" onmouseleave="this.style.boxShadow='none'">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+          <div style="font-size:11px;font-weight:600;color:#c05621">자재입고예정</div>
+          <div style="font-size:9px;color:#c3dafe;font-weight:500">✏</div>
+        </div>
+        <div id="date-자재입고-display" style="font-size:13px;font-weight:700;color:#2d3748;margin-bottom:5px">${p.자재입고||"미설정"}</div>
+        ${p.자재입고?ddayHtml(p.자재입고,p.overallStatus):`<span style="font-size:11px;color:#cbd5e0">날짜를 설정하세요</span>`}
+      </div>
+      <div ondblclick="editDate('턴온')" title="더블클릭하여 수정" style="background:${urg턴?"#fff5f5":"#fff"};border-radius:10px;padding:10px 12px;border:1px solid ${urg턴?"#feb2b2":"#e8ecf2"};cursor:pointer;transition:box-shadow .15s" onmouseenter="this.style.boxShadow='0 2px 8px rgba(102,126,234,.2)'" onmouseleave="this.style.boxShadow='none'">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+          <div style="font-size:11px;font-weight:600;color:${urg턴?"#c53030":"#a0aec0"}">턴온${urg턴?" ⚡":""}</div>
+          <div style="font-size:9px;color:#c3dafe;font-weight:500">✏</div>
+        </div>
+        <div id="date-턴온-display" style="font-size:13px;font-weight:700;color:${urg턴?"#c53030":"#2d3748"};margin-bottom:5px">${p.턴온||"미설정"}</div>
+        ${p.턴온?ddayHtml(p.턴온,p.overallStatus):""}
+      </div>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:12px;border:1px solid #e8ecf2">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:13px;font-weight:600;color:#4a5568">진행률</span>
+        ${statusHtml(p.overallStatus)}
+      </div>
+      ${progHtml(p.progress,hasIssue,8)}
+      <div style="font-size:11px;color:#a0aec0;margin-top:6px">완료 ${done} / ${appl.length}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <button onclick="toggleInspect()" style="padding:9px 0;border-radius:10px;font-size:12px;font-weight:600;border:1.5px solid ${p.검수완료?"#81e6d9":"#e2e8f0"};background:${p.검수완료?"#e6fffa":"#fff"};color:${p.검수완료?"#0987a0":"#718096"};cursor:pointer">${p.검수완료?"✓ 1차검수완료":"1차검수완료"}</button>
+      <button onclick="toggleShip()" style="padding:9px 0;border-radius:10px;font-size:12px;font-weight:600;border:1.5px solid ${p.출고완료?"#9ae6b4":"#e2e8f0"};background:${p.출고완료?"#f0fff4":"#fff"};color:${p.출고완료?"#276749":!p.검수완료?"#cbd5e0":"#718096"};cursor:${p.검수완료?"pointer":"not-allowed"};opacity:${!p.검수완료&&!p.출고완료?0.5:1}">${p.출고완료?"↑ 출고완료":"출고완료"}</button>
+      <button onclick="toggle2ndInspect()" style="padding:9px 0;border-radius:10px;font-size:12px;font-weight:600;border:1.5px solid ${p.insp2done?"#cbd5e0":"#e2e8f0"};background:${p.insp2done?"#edf2f7":"#fff"};color:${p.insp2done?"#718096":!p.출고완료?"#cbd5e0":"#718096"};cursor:${p.출고완료?"pointer":"not-allowed"};opacity:${!p.출고완료&&!p.insp2done?0.5:1}">${p.insp2done?"✓ 2차검수완료":"2차검수완료"}</button>
+    </div>
+    <div>
+      <div style="font-size:12px;font-weight:600;color:#718096;margin-bottom:5px">납입처</div>
+      <textarea id="m-bigo" rows="2" onblur="saveMemo()" style="width:100%;padding:9px 11px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:12px;resize:none;background:#fff;line-height:1.6" placeholder="납입처...">${p.비고||""}</textarea>
+    </div>
+    <div>
+      <div style="font-size:12px;font-weight:600;color:#718096;margin-bottom:5px">현장 메모</div>
+      <textarea id="m-memo" rows="3" onblur="saveMemo()" style="width:100%;padding:9px 11px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:12px;resize:none;background:#fff;line-height:1.6" placeholder="문제 내용, 특이사항...">${p.현장메모||""}</textarea>
+    </div>
+    ${(p.이력||[]).length>0?`<div><div style="font-size:12px;font-weight:600;color:#718096;margin-bottom:6px">변경 이력</div>${[...(p.이력||[])].reverse().map(h=>`<div style="font-size:11px;color:#718096;background:#f7f9fc;padding:4px 8px;border-radius:6px;margin-bottom:3px"><span style="color:#a0aec0">${h.ts}</span> ${h.from} → <span style="font-weight:600;color:${STATUS_CFG[h.to]?.color||"#2d3748"}">${h.to}</span></div>`).join("")}</div>`:""}
+  `;
+
+  // 중간 — 자재입고현황
+  const jis=p.자재입고상태||{};
+  const doneCnt=JAIP.filter(k=>jis[k]).length;
+  let mh=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+    <div style="font-size:14px;font-weight:700;color:#2d3748">자재입고 현황 <span style="font-size:12px;color:#a0aec0;font-weight:500">${doneCnt}/${JAIP.length}</span></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:8px">
+    ${JAIP.map(k=>{
+      const done=!!jis[k];
+      return`<button onclick="toggleJaip('${k}')" style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:10px;border:1.5px solid ${done?"#9ae6b4":"#e2e8f0"};background:${done?"#f0fff4":"#fff"};cursor:pointer;width:100%">
+        <span style="width:14px;height:14px;border-radius:50%;background:${done?"#48bb78":"#e2e8f0"};border:2px solid ${done?"#9ae6b4":"#cbd5e0"};flex-shrink:0"></span>
+        <span style="font-size:14px;font-weight:600;color:${done?"#276749":"#718096"}">${k}</span>
+        <span style="margin-left:auto;font-size:12px;font-weight:600;color:${done?"#276749":"#a0aec0"}">${done?"✓ 입고완료":"대기"}</span>
+      </button>`;
+    }).join("")}
+  </div>`;
+  document.getElementById("modal-mid").innerHTML=mh;
+
+  // 오른쪽 — 공정상태관리
+  let rh=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+    <div style="font-size:14px;font-weight:700;color:#2d3748">공정 상태 관리</div>
+    <button onclick="closeModal()" style="background:none;border:none;font-size:18px;color:#a0aec0;cursor:pointer;line-height:1;padding:2px 6px">✕</button>
+  </div>`;
+  if(true){
+  BUPMOK.forEach(b=>{
+    const state=p.부품상태[b],tc=TS[state]||TS["대기"],isIssue=state==="문제";
+    const btns=TASK_STATES.map(s=>{
+      const sc=TS[s],act=state===s;
+      return`<button onclick="setTask('${b}','${s}')" class="task-btn${act?" active":""}" style="${act?`background:${sc.bg};color:${sc.color};border-color:${sc.border};`:""}flex:1;padding:6px 0;font-size:12px">${s}</button>`;
+    }).join("");
+    const insp=p.검수||{};
+    const b1=(insp.차1&&insp.차1.공정비고&&insp.차1.공정비고[b])||{검수자:"",항목:[]};
+    const b2=(insp.차2&&insp.차2.공정비고&&insp.차2.공정비고[b])||{검수자:"",항목:[]};
+    const isOpen=(p._openProcItem||{})[b];
+    const has1st=(b1.항목||[]).some(it=>it.내용&&!it.완료);
+    const has2nd=(b2.항목||[]).some(it=>it.내용&&!it.완료);
+    const itemBorder=isIssue?"1px solid #feb2b2":"1px solid #edf2f7";
+    rh+=`<div style="background:#fff;border-radius:12px;border:${itemBorder};margin-bottom:9px;overflow:hidden">
+      <div onclick="toggleProcItem('${b}')" style="display:flex;justify-content:space-between;align-items:center;padding:12px 15px;cursor:pointer">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:13px;font-weight:600;color:${(has1st||has2nd)?"#c53030":isIssue?"#c53030":"#2d3748"}">${b}</span>
+          ${(insp.공정작업자&&insp.공정작업자[b])?`<span style="font-size:11px;font-weight:600;color:#667eea;background:#eef2ff;padding:2px 8px;border-radius:20px">👷 ${insp.공정작업자[b]}</span>`:""}
+          ${has1st?`<span style="font-size:10px;font-weight:700;color:#c05621;background:#fffaf0;padding:2px 7px;border-radius:4px;border:1px solid #fbd38d">🟠 1차 불량</span>`:""}
+          ${has2nd?`<span style="font-size:10px;font-weight:700;color:#c53030;background:#fff5f5;padding:2px 7px;border-radius:4px;border:1px solid #feb2b2">🔴 2차 불량</span>`:""}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="badge" style="background:${tc.bg};color:${tc.color};border:1px solid ${tc.border};font-size:11px;padding:2px 8px">${state}</span>
+          <span style="font-size:11px;color:#a0aec0">${isOpen?"▲":"▼"}</span>
+        </div>
+      </div>
+      ${isOpen?`<div style="padding:0 15px 14px;border-top:1px solid #f7f9fc">
+        <!-- 상태 버튼 -->
+        <div style="display:flex;gap:4px;margin-bottom:12px">${btns}</div>
+        <!-- 작업자 -->
+        <div style="margin-bottom:10px;display:flex;align-items:center;gap:8px">
+          <span style="font-size:11px;font-weight:600;color:#718096;white-space:nowrap">👷 작업자</span>
+          <input value="${(insp.공정작업자&&insp.공정작업자[b])||""}" onblur="saveProcWorker('${b}',this.value)" placeholder="작업자 이름..." style="flex:1;padding:5px 9px;border-radius:20px;border:1.5px solid #e2e8f0;font-size:12px">
+        </div>
+        <!-- 1차 검수 -->
+        <div style="background:${has1st?"#fffaf0":"#f8fafc"};border-radius:8px;padding:10px;margin-bottom:8px;border:${has1st?"2px solid #ed8936":"1px solid #edf2f7"}">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="font-size:11px;font-weight:700;color:${has1st?"#c05621":"#667eea"}">🔍 1차 검수 ${has1st?"🟠":""}</div>
+          </div>
+          <input value="${b1.검수자||''}" onblur="saveProcNote('${b}',1,'검수자',this.value)" placeholder="검수자 이름" style="width:100%;padding:6px 8px;border-radius:6px;border:1px solid #e2e8f0;font-size:12px;margin-bottom:8px">
+          ${(b1.항목||[]).map((item,i)=>`
+            <div style="background:${item.완료?'#f0fff4':'#fff'};border-radius:8px;padding:9px;border:1px solid ${item.완료?'#9ae6b4':'#e2e8f0'};margin-bottom:6px">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+                <input type="checkbox" ${item.완료?'checked':''} onchange="toggleProcItem2('${b}',1,${i},this.checked)" style="width:17px;height:17px;cursor:pointer;accent-color:#48bb78;flex-shrink:0">
+                <span style="font-size:11px;font-weight:600;color:${item.완료?'#276749':'#718096'}">${item.완료?'✓ 조치완료':'미완료'}</span>
+                <button onclick="removeProcDefect('${b}',1,${i})" style="margin-left:auto;background:none;border:none;color:#fc8181;cursor:pointer;font-size:13px;padding:0;line-height:1">✕</button>
+              </div>
+              <textarea onblur="saveProcDefectText('${b}',1,${i},this.value)" rows="2" placeholder="불량 내용..." style="width:100%;padding:6px 8px;border-radius:6px;border:1px solid #e2e8f0;font-size:12px;resize:none;margin-bottom:6px;background:${item.완료?'#f0fff4':'#fff'}">${item.내용||''}</textarea>
+              <label style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#ebf4ff;color:#3182ce;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer">
+                📷 사진
+                <input type="file" accept="image/*" capture="environment" onchange="attachProcPhoto2('${b}',1,${i},this)" style="display:none">
+              </label>
+              ${item.사진?`<div style="margin-top:6px;position:relative"><img src="${item.사진}" style="width:100%;max-height:160px;object-fit:contain;border-radius:6px;border:1px solid #edf2f7"><button onclick="deleteProcPhoto2('${b}',1,${i})" style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.5);border:none;color:#fff;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer;line-height:1">✕</button></div>`:''}
+            </div>`).join('')}
+          <button onclick="addProcDefect('${b}',1)" style="width:100%;padding:7px;border-radius:7px;border:1.5px dashed #c3dafe;background:#f0f8ff;color:#3182ce;font-size:12px;font-weight:600;cursor:pointer;margin-top:2px">+ 불량 추가</button>
+        </div>
+        <!-- 2차 검수 -->
+        <div style="background:${has2nd?"#fff5f5":"#f8fafc"};border-radius:8px;padding:10px;border:${has2nd?"2px solid #e53e3e":"1px solid #edf2f7"}">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="font-size:11px;font-weight:700;color:${has2nd?"#c53030":"#0987a0"}">🔍 2차 검수 ${has2nd?"🔴":""}</div>
+          </div>
+          <input value="${b2.검수자||''}" onblur="saveProcNote('${b}',2,'검수자',this.value)" placeholder="검수자 이름" style="width:100%;padding:6px 8px;border-radius:6px;border:1px solid #e2e8f0;font-size:12px;margin-bottom:8px">
+          ${(b2.항목||[]).map((item,i)=>`
+            <div style="background:${item.완료?'#f0fff4':'#fff'};border-radius:8px;padding:9px;border:1px solid ${item.완료?'#9ae6b4':'#e2e8f0'};margin-bottom:6px">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+                <input type="checkbox" ${item.완료?'checked':''} onchange="toggleProcItem2('${b}',2,${i},this.checked)" style="width:17px;height:17px;cursor:pointer;accent-color:#48bb78;flex-shrink:0">
+                <span style="font-size:11px;font-weight:600;color:${item.완료?'#276749':'#718096'}">${item.완료?'✓ 조치완료':'미완료'}</span>
+                <button onclick="removeProcDefect('${b}',2,${i})" style="margin-left:auto;background:none;border:none;color:#fc8181;cursor:pointer;font-size:13px;padding:0;line-height:1">✕</button>
+              </div>
+              <textarea onblur="saveProcDefectText('${b}',2,${i},this.value)" rows="2" placeholder="불량 내용..." style="width:100%;padding:6px 8px;border-radius:6px;border:1px solid #e2e8f0;font-size:12px;resize:none;margin-bottom:6px;background:${item.완료?'#f0fff4':'#fff'}">${item.내용||''}</textarea>
+              <label style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#ebf4ff;color:#3182ce;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer">
+                📷 사진
+                <input type="file" accept="image/*" capture="environment" onchange="attachProcPhoto2('${b}',2,${i},this)" style="display:none">
+              </label>
+              ${item.사진?`<div style="margin-top:6px;position:relative"><img src="${item.사진}" style="width:100%;max-height:160px;object-fit:contain;border-radius:6px;border:1px solid #edf2f7"><button onclick="deleteProcPhoto2('${b}',2,${i})" style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.5);border:none;color:#fff;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer;line-height:1">✕</button></div>`:''}
+            </div>`).join('')}
+          <button onclick="addProcDefect('${b}',2)" style="width:100%;padding:7px;border-radius:7px;border:1.5px dashed #c3dafe;background:#f0f8ff;color:#3182ce;font-size:12px;font-weight:600;cursor:pointer;margin-top:2px">+ 불량 추가</button>
+        </div>
+      </div>`:""}
+    </div>`;
+  });
+
+  // MP
+  const mpS=deriveMpState(p.mp하위상태||{}),mtc=TS[mpS]||TS["대기"];
+  rh+=`<div style="border-radius:12px;border:1.5px solid ${mpOpen?"#667eea":"#e2e8f0"};overflow:hidden">
+    <div onclick="toggleMp()" style="display:flex;justify-content:space-between;align-items:center;padding:12px 15px;cursor:pointer;background:${mpOpen?"#eef2ff":"#f8fafc"}">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:13px;font-weight:700;color:${mpOpen?"#667eea":"#2d3748"}">MP</span>
+        <span style="font-size:11px;color:${mpOpen?"#667eea":"#718096"};background:${mpOpen?"#e0e7ff":"#edf2f7"};padding:2px 8px;border-radius:10px;font-weight:600">${mpOpen?"▼ 접기":"▶ 하위 "+MP_SUBS.length+"개"}</span>
+      </div>
+      <span class="badge" style="background:${mtc.bg};color:${mtc.color};border:1px solid ${mtc.border};font-size:11px;padding:2px 8px">${mpS}</span>
+    </div>
+    ${mpOpen?`<div style="border-top:1px solid #edf2f7">${MP_SUBS.map((k,i)=>{
+      const ss=p.mp하위상태[k]||"대기",stc=TS[ss]||TS["대기"];
+      const sbtns=TASK_STATES.map(s=>{const sc=TS[s],act=ss===s;return`<button onclick="setMpSub('${k}','${s}')" style="flex:1;padding:4px 0;border-radius:6px;font-size:11px;border:1.5px solid ${act?sc.border:"#e2e8f0"};background:${act?sc.bg:"#fff"};color:${act?sc.color:"#94a3b8"};font-weight:${act?700:500};cursor:pointer">${s}</button>`;}).join("");
+      return`<div style="padding:9px 15px 9px 26px;background:${i%2===0?"#fafbfd":"#fff"};border-bottom:${i<MP_SUBS.length-1?"1px solid #f7f9fc":"none"}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:12px;font-weight:600;color:#4a5568">${k}</span>
+          <span class="badge" style="background:${stc.bg};color:${stc.color};border:1px solid ${stc.border};font-size:10px;padding:1px 6px">${ss}</span>
+        </div>
+        <div style="display:flex;gap:4px">${sbtns}</div>
+      </div>`;
+    }).join("")}</div>`:""}
+  </div>`;
+
+  }
+
+  document.getElementById("modal-right").innerHTML=rh;
+}
+
+function setModalTab(t){ modalTab=t; renderModal(); }
+
+function toggleProcItem(b){
+  const idx=panels.findIndex(p=>p.id===currentId); if(idx<0) return;
+  const cur=panels[idx]._openProcItem||{};
+  panels[idx]={...panels[idx],_openProcItem:{...cur,[b]:!cur[b]}};
+  renderModal();
+}
+function resizeAndSave(file, cb){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      const MAX=800;
+      let w=img.width,h=img.height;
+      if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+      if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}
+      const canvas=document.createElement("canvas");
+      canvas.width=w;canvas.height=h;
+      canvas.getContext("2d").drawImage(img,0,0,w,h);
+      cb(canvas.toDataURL("image/jpeg",0.6));
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function getOrInitProcBigo(insp,b,차n){
+  const key="차"+차n;
+  if(!insp[key]) insp[key]={검수자:"",공정비고:{}};
+  if(!insp[key].공정비고) insp[key].공정비고={};
+  if(!insp[key].공정비고[b]) insp[key].공정비고[b]={검수자:"",항목:[]};
+  if(!insp[key].공정비고[b].항목) insp[key].공정비고[b].항목=[];
+  return insp[key].공정비고[b];
+}
+function addProcDefect(b,차n){
+  saveInspData(insp=>{ getOrInitProcBigo(insp,b,차n).항목.push({내용:"",완료:false,사진:""}); });
+}
+function removeProcDefect(b,차n,i){
+  saveInspData(insp=>{ getOrInitProcBigo(insp,b,차n).항목.splice(i,1); });
+}
+function toggleProcItem2(b,차n,i,v){
+  saveInspData(insp=>{ getOrInitProcBigo(insp,b,차n).항목[i].완료=v; });
+}
+function saveProcDefectText(b,차n,i,v){
+  saveInspData(insp=>{ getOrInitProcBigo(insp,b,차n).항목[i].내용=v; });
+}
+function attachProcPhoto2(b,차n,i,input){
+  const file=input.files[0]; if(!file) return;
+  resizeAndSave(file,b64=>{ saveInspData(insp=>{ getOrInitProcBigo(insp,b,차n).항목[i].사진=b64; }); });
+}
+function deleteProcPhoto2(b,차n,i){
+  saveInspData(insp=>{ getOrInitProcBigo(insp,b,차n).항목[i].사진=""; });
+}
+function saveProcWorker(b,val){
+  saveInspData(insp=>{
+    if(!insp.공정작업자) insp.공정작업자={};
+    insp.공정작업자[b]=val;
+  });
+}
+function saveProcNote(b,차n,field,val){
+  saveInspData(insp=>{
+    const key="차"+차n;
+    if(!insp[key]) insp[key]={검수자:"",불량:[],완료:false,공정비고:{}};
+    if(!insp[key].공정비고) insp[key].공정비고={};
+    if(!insp[key].공정비고[b]) insp[key].공정비고[b]={검수자:"",내용:""};
+    insp[key].공정비고[b][field]=val;
+  });
+}
+
+/* ── 검수 헬퍼 ── */
+function getInsp(p){ return p.검수||{작업자:"",차1:{검수자:"",불량:[],완료:false},차2:{검수자:"",불량:[],완료:false}}; }
+function saveInspData(fn){
+  const idx=panels.findIndex(p=>p.id===currentId); if(idx<0) return;
+  const insp=JSON.parse(JSON.stringify(getInsp(panels[idx])));
+  fn(insp);
+  panels[idx]={...panels[idx],검수:insp};
+  // 즉시 화면 갱신 먼저
+  renderModal();
+  render();
+  // Firebase 비동기 저장
+  isSyncing=true;
+  save();
+  setTimeout(()=>{ isSyncing=false; },2000);
+}
+function saveWorker(v){ saveInspData(insp=>{insp.작업자=v;}); }
+function saveInspector(n,v){ saveInspData(insp=>{insp["차"+n].검수자=v;}); }
+function addBullet(n){ saveInspData(insp=>{ (insp["차"+n].불량=insp["차"+n].불량||[]).push({내용:"",완료:false,사진:""}); }); }
+function removeBullet(n,i){ saveInspData(insp=>{ insp["차"+n].불량.splice(i,1); }); }
+function toggleBullet(n,i,v){ saveInspData(insp=>{ insp["차"+n].불량[i].완료=v; }); }
+function updateBulletText(n,i,v){ saveInspData(insp=>{ insp["차"+n].불량[i].내용=v; }); }
+function completeInspect(n){ saveInspData(insp=>{ insp["차"+n].완료=!insp["차"+n].완료; }); }
+function attachPhoto(n,i,input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    // 이미지 리사이즈 (최대 800px, 품질 0.6)
+    const img=new Image();
+    img.onload=()=>{
+      const MAX=800;
+      let w=img.width,h=img.height;
+      if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+      if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}
+      const canvas=document.createElement("canvas");
+      canvas.width=w; canvas.height=h;
+      canvas.getContext("2d").drawImage(img,0,0,w,h);
+      const b64=canvas.toDataURL("image/jpeg",0.6);
+      saveInspData(insp=>{ insp["차"+n].불량[i].사진=b64; });
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+
+// ── 모달 액션 ──
+function updatePanel(id,fn){
+  const idx=panels.findIndex(p=>p.id===id); if(idx<0) return;
+  const old=panels[idx];
+  panels[idx]=recompute(fn({...old}));
+  if(old.overallStatus!==panels[idx].overallStatus){
+    const now=new Date(),pad=n=>String(n).padStart(2,"0");
+    const ts=now.getFullYear()+"-"+pad(now.getMonth()+1)+"-"+pad(now.getDate())+" "+pad(now.getHours())+":"+pad(now.getMinutes());
+    panels[idx].이력=[...(old.이력||[]),{ts,from:old.overallStatus,to:panels[idx].overallStatus}].slice(-20);
+  }
+  // 즉시 화면 갱신 (Firebase 응답 기다리지 않음)
+  renderModal(); render();
+  // Firebase에 비동기 저장
+  isSyncing = true;
+  save();
+  setTimeout(()=>{ isSyncing = false; }, 2000);
+}
+function setTask(b,s){updatePanel(currentId,p=>({...p,부품상태:{...p.부품상태,[b]:s}}));}
+function setMpSub(k,s){updatePanel(currentId,p=>({...p,mp하위상태:{...p.mp하위상태,[k]:s}}));}
+function toggleInspect(){updatePanel(currentId,p=>({...p,검수완료:!p.검수완료,출고완료:p.검수완료?false:p.출고완료}));}
+function toggleShip(){const p=panels.find(x=>x.id===currentId);if(!p?.검수완료)return;updatePanel(currentId,p=>({...p,출고완료:!p.출고완료,insp2done:p.출고완료?false:p.insp2done}));}
+function setProbNote(b,v){const p=panels.find(x=>x.id===currentId);if(!p)return;p.문제비고={...p.문제비고,[b]:v};save();}
+function saveMemo(){
+  const p=panels.find(x=>x.id===currentId);if(!p)return;
+  const b=document.getElementById("m-bigo"),m=document.getElementById("m-memo");
+  if(b) p.비고=b.value; if(m) p.현장메모=m.value;
+  save();
+}
+function toggle2ndInspect(){const p=panels.find(x=>x.id===currentId);if(!p||!p.출고완료)return;updatePanel(currentId,p=>({...p,insp2done:!p.insp2done}));}
+function toggleJaip(k){
+  const p=panels.find(x=>x.id===currentId);if(!p)return;
+  if(!p.자재입고상태) p.자재입고상태={};
+  p.자재입고상태[k]=!p.자재입고상태[k];
+  save();renderModal();render();
+}
+function toggleMp(){mpOpen=!mpOpen;renderModal();}
+
+/* ─────────────────── 필터 액션 ─────────────────── */
+function setStatus(s){filterStatus=(s==="전체"||filterStatus===s)?"전체":s;render();}
+function setNapgi(d){filterNapgi=(d==="전체"||filterNapgi===d)?"전체":d;render();}
+function toggleUrgent(){showUrgent=!showUrgent;render();}
+function toggleHideShipped(){hideShipped=!hideShipped;render();}
+function toggleDoneNapgi(){showDoneNapgi=!showDoneNapgi;try{localStorage.setItem("showDoneNapgi",String(showDoneNapgi));}catch(e){}render();}
+
+document.getElementById("search").addEventListener("input",e=>{searchQ=e.target.value;render();});
+document.getElementById("napgi-sel").addEventListener("change",e=>{filterNapgi=e.target.value;render();});
+document.getElementById("btn-table").addEventListener("click",()=>{viewMode="table";render();});
+
+/* ─────────────────── 사진 추가 ─────────────────── */
+let pendingPhotoRows=[];
+document.getElementById("btn-photo").addEventListener("click",()=>{resetPhotoModal();document.getElementById("photo-modal").style.display="flex";});
+document.getElementById("photo-modal").addEventListener("click",function(e){if(e.target===this)closePhoto();});
+document.getElementById("photo-dropzone").addEventListener("dragover",e=>{e.preventDefault();document.getElementById("photo-dropzone").classList.add("drag");});
+document.getElementById("photo-dropzone").addEventListener("dragleave",()=>document.getElementById("photo-dropzone").classList.remove("drag"));
+document.getElementById("photo-dropzone").addEventListener("drop",e=>{e.preventDefault();document.getElementById("photo-dropzone").classList.remove("drag");handlePhoto(e.dataTransfer.files[0]);});
+document.getElementById("photo-dropzone").addEventListener("click",()=>document.getElementById("photo-file").click());
+document.getElementById("photo-file").addEventListener("change",e=>handlePhoto(e.target.files[0]));
+document.addEventListener("paste",e=>{
+  if(document.getElementById("photo-modal").style.display!=="flex") return;
+  const items=e.clipboardData&&e.clipboardData.items;
+  if(!items) return;
+  for(const item of items){
+    if(item.type.startsWith("image/")){
+      e.preventDefault();
+      handlePhoto(item.getAsFile());
+      return;
+    }
+  }
+});
+
+function closePhoto(){document.getElementById("photo-modal").style.display="none";}
+function resetPhotoModal(){
+  document.getElementById("photo-status").style.display="none";
+  document.getElementById("photo-preview").style.display="none";
+  document.getElementById("photo-result").style.display="none";
+  document.getElementById("photo-confirm").style.display="none";
+  document.getElementById("photo-dropzone").style.display="";
+  document.getElementById("photo-file").value="";
+  pendingPhotoRows=[];
+}
+
+async function handlePhoto(file){
+  if(!file||!file.type.startsWith("image/")) return;
+  const url=URL.createObjectURL(file);
+  document.getElementById("photo-img").src=url;
+  document.getElementById("photo-preview").style.display="block";
+  document.getElementById("photo-dropzone").style.display="none";
+  document.getElementById("photo-status").style.display="block";
+  document.getElementById("photo-status-text").textContent="이미지 전처리 중...";
+
+  try{
+    document.getElementById("photo-status-text").textContent="Google Vision API로 인식 중...";
+    // base64 변환: 파일 직접 읽기, 실패 시 캔버스 fallback
+    let b64;
+    try{
+      b64=await new Promise((res,rej)=>{
+        const reader=new FileReader();
+        reader.onload=()=>res(reader.result.split(",")[1]);
+        reader.onerror=rej;
+        reader.readAsDataURL(file);
+      });
+    }catch(e){
+      // fallback: 캔버스로 변환
+      const img=new Image();img.src=url;
+      await new Promise(r=>{img.onload=r;});
+      const cv=document.createElement("canvas");cv.width=img.width;cv.height=img.height;
+      cv.getContext("2d").drawImage(img,0,0);
+      b64=cv.toDataURL("image/png").split(",")[1];
+    }
+    console.log(`전송 크기: ${Math.round(b64.length/1024)}KB`);
+
+    // Google Vision API 호출 (TEXT_DETECTION + DOCUMENT_TEXT_DETECTION 동시)
+    const VISION_KEY="AIzaSyAMb5zWGgCINDaJ4tTEocXNMA_6sTAtnpA";
+    const resp=await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({requests:[{image:{content:b64},features:[{type:"DOCUMENT_TEXT_DETECTION"},{type:"TEXT_DETECTION"}],imageContext:{languageHints:["ko","en"]}}]})
+    });
+    const result=await resp.json();
+    if(result.error){throw new Error(result.error.message);}
+    if(result.responses&&result.responses[0]&&result.responses[0].error){throw new Error(result.responses[0].error.message);}
+    const allText=(result.responses&&result.responses[0]&&result.responses[0].fullTextAnnotation&&result.responses[0].fullTextAnnotation.text)||"";
+    document.getElementById("photo-status").style.display="none";
+    console.log("=== Google Vision OCR 결과 ===\n"+allText);
+    parsePhotoText(allText);
+  }catch(err){
+    console.error("OCR 에러:",err);
+    document.getElementById("photo-status").style.display="none";
+    document.getElementById("photo-result").style.display="block";
+    document.getElementById("photo-result").innerHTML=`<div style="color:#c53030;font-weight:600;font-size:13px">OCR 실패: ${err.message||err}</div><div style="font-size:11px;color:#718096;margin-top:6px">Google Vision API를 확인하세요</div>`;
+  }
+}
+
+function addDays(dateStr,days){
+  const d=new Date(dateStr);d.setDate(d.getDate()+days);
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+
+function parsePhotoText(text){
+  const lines=text.split("\n").map(l=>l.trim()).filter(l=>l.length>0);
+  const parsed=[];
+  const year=new Date().getFullYear();
+  const toDate=s=>{if(!s||!s.match(/^\d{1,2}\/\d{1,2}$/))return"";const p=s.split("/");return`${year}-${p[0].padStart(2,"0")}-${p[1].padStart(2,"0")}`;};
+
+  // 헤더 스킵
+  let i=0;
+  while(i<lines.length&&!lines[i].match(/YS[-.]?TEPS/i)) i++;
+
+  while(i<lines.length){
+    const line=lines[i];
+    const tepsM=line.match(/YS[-.]?TEPS(\d+)/i);
+    if(!tepsM){i++;continue;}
+
+    const 호기=tepsM[1];
+    const inlineName=line.replace(tepsM[0],"").trim();
+
+    // 다음 YS-TEPS까지 값 수집
+    const rawVals=[];
+    if(inlineName) rawVals.push(inlineName);
+    i++;
+    while(i<lines.length&&!lines[i].match(/YS[-.]?TEPS/i)){
+      if(lines[i].length>0) rawVals.push(lines[i]);
+      i++;
+    }
+    // 한 줄에 여러 값이 합쳐진 경우 분리 (단, U-FLEX PLUS 등은 유지)
+    const vals=[];
+    rawVals.forEach(v=>{
+      // 날짜(M/D) + 다른값이 붙은 경우, 또는 여러 토큰이 있는 경우 분리
+      const parts=v.split(/\s+/);
+      if(parts.length===1){vals.push(v);return;}
+      // U-FLEX PLUS, U/Flex PLUS 등은 합치기
+      const merged=[];
+      for(let k=0;k<parts.length;k++){
+        if(parts[k].match(/^U[-/]?FLEX$/i)&&k+1<parts.length&&parts[k+1].match(/^PLUS$/i)){
+          merged.push(parts[k]+" "+parts[k+1]);k++;
+        } else if(parts[k].match(/^\d+$/)&&k>0&&merged[merged.length-1]==="ZONE"){
+          merged[merged.length-1]=parts[k-1]+" "+parts[k];
+        } else {
+          merged.push(parts[k]);
+        }
+      }
+      merged.forEach(m=>vals.push(m));
+    });
+
+    let vi=0,납입처="",proj="",정역="",기구="",자재="";
+    const dates=[];
+
+    // 납입처 (P4D, 테스나, 네패스아크, MEK 등)
+    if(vi<vals.length&&!vals[vi].match(/^H[O0]?\d/i)&&!vals[vi].match(/^[정역]$/)){
+      납입처=vals[vi];vi++;
+    }
+    // 프로젝트 (H로 시작)
+    if(vi<vals.length&&vals[vi].match(/^H[O0]?\d/i)){
+      let pv=vals[vi];
+      // 프로젝트 끝에 정/역이 붙은 경우 분리: "H0154Z_9정" → "H0154Z_9" + "정"
+      const tailDir=pv.match(/([정역])$/);
+      if(tailDir){pv=pv.slice(0,-1);정역=tailDir[1];}
+      proj=pv.replace(/[\s-]/g,"_").toUpperCase().replace(/^HO(0)?/,"H0");
+      vi++;
+    }
+    // 방향 (별도 줄)
+    if(!정역&&vi<vals.length&&(vals[vi]==="정"||vals[vi]==="역")){
+      정역=vals[vi];vi++;
+    }
+    // 방향+제작 합쳐진 경우: "정건일", "정 건일", "역 두원" 등
+    if(!정역&&vi<vals.length){
+      const dirMfg=vals[vi].match(/^([정역])\s*(건일|두원|대원)/);
+      if(dirMfg){정역=dirMfg[1];vals[vi]=dirMfg[2];}
+    }
+    // 제작+방향 합쳐진 경우: "건일 정", "건일정" 등
+    if(!정역&&vi<vals.length){
+      const mfgDir=vals[vi].match(/^(건일|두원|대원)\s*([정역])$/);
+      if(mfgDir){기구=mfgDir[1];정역=mfgDir[2];vi++;}
+    }
+    // 방향이 앞쪽 값에 포함: 날짜가 아닌 값 중에서 정/역 검색
+    if(!정역){
+      for(let k=vi;k<Math.min(vi+3,vals.length);k++){
+        if(vals[k]==="정"||vals[k]==="역"){정역=vals[k];vals.splice(k,1);break;}
+        if(vals[k].match(/^[정역]\s/)){정역=vals[k][0];vals[k]=vals[k].slice(1).trim();break;}
+        if(vals[k].match(/\s[정역]$/)){정역=vals[k].slice(-1);vals[k]=vals[k].slice(0,-1).trim();break;}
+      }
+    }
+    // 제작
+    if(!기구&&vi<vals.length&&(vals[vi].includes("건일")||vals[vi].includes("두원")||vals[vi].includes("대원"))){
+      기구=vals[vi].includes("건일")?"건일":vals[vi].includes("두원")?"두원":"대원";vi++;
+    }
+    // 제작이 다음 몇 줄 안에 있는 경우
+    if(!기구){
+      for(let k=vi;k<Math.min(vi+3,vals.length);k++){
+        if(vals[k].includes("건일")||vals[k].includes("두원")||vals[k].includes("대원")){
+          기구=vals[k].includes("건일")?"건일":vals[k].includes("두원")?"두원":"대원";
+          vals.splice(k,1);break;
+        }
+      }
+    }
+    // 날짜들 (M/D)
+    while(vi<vals.length&&vals[vi].match(/^\d{1,2}\/\d{1,2}$/)){
+      dates.push(vals[vi]);vi++;
+    }
+    // 자재구분
+    for(let k=vi;k<vals.length;k++){
+      const m=vals[k].match(/T\d{3,5}|M\d[A-Z]*\d*|MT\d{3,5}|U[-/]?FLEX\s*PLUS|M7HSV/i);
+      if(m){자재=m[0].toUpperCase();break;}
+    }
+
+    const 자재필요=toDate(dates[0]);
+    const ioCheck=toDate(dates[2]);
+    const 납기=ioCheck?addDays(ioCheck,-14):"";
+    const 턴온=ioCheck?addDays(ioCheck,-1):"";
+    const 부={};BUPMOK.forEach(b=>{부[b]="-";});
+
+    if(호기) parsed.push({프:proj,자:자재,기:기구,정:정역,호:호기,납:납기,턴:턴온,자재입고:자재필요,납입처,부,iocheck:dates[2]||"",_iocheck:dates[2]||""});
+  }
+
+  const resultEl=document.getElementById("photo-result");
+  resultEl.style.display="block";
+
+  if(parsed.length===0){
+    resultEl.innerHTML=`<div style="text-align:center;padding:16px">
+      <div style="font-size:13px;color:#718096;margin-bottom:8px">인식 가능한 항목이 없습니다</div>
+      <details style="text-align:left"><summary style="font-size:11px;color:#a0aec0;cursor:pointer">OCR 원문 보기</summary>
+      <pre style="font-size:10px;color:#718096;background:#f7f9fc;padding:8px;border-radius:6px;max-height:200px;overflow:auto;white-space:pre-wrap;margin-top:6px">${text.replace(/</g,'&lt;')}</pre></details>
+    </div>`;
+    return;
+  }
+
+  // 수정 가능한 테이블 생성
+  const cols=["프로젝트","납입처","정역","제작","호기","자재구분","자재입고","IO CHECK(납기/턴온)"];
+  const keys=["프","납입처","정","기","호","자","자재입고","iocheck"];
+  parsed.forEach(r=>{r.iocheck=r._iocheck||"";});
+
+  let html=`<div style="font-size:13px;font-weight:700;color:#2d3748;margin-bottom:8px">📋 인식 결과 ${parsed.length}건 — 수정 후 추가하세요</div>`;
+  html+=`<div style="max-height:60vh;overflow:auto;border:1px solid #e2e8f0;border-radius:8px">
+    <table id="ocr-edit-tbl" style="width:100%;border-collapse:collapse;font-size:11px">
+      <thead><tr style="background:#f7f9fc;position:sticky;top:0">
+        <th style="padding:5px 4px;text-align:center;color:#718096;width:24px">✓</th>
+        ${cols.map(c=>`<th style="padding:5px 6px;text-align:left;color:#718096">${c}</th>`).join("")}
+      </tr></thead>
+      <tbody>${parsed.map((r,i)=>{
+        const ex=panels.find(p=>p.호기===r.호);
+        const rowBg=ex?"#fffaf0":"#fff";
+        return`<tr style="border-top:1px solid #f0f4f8;background:${rowBg}">
+          <td style="padding:4px;text-align:center"><input type="checkbox" checked data-idx="${i}" class="ocr-chk" style="width:15px;height:15px;cursor:pointer"></td>
+          ${keys.map(k=>`<td style="padding:3px 4px"><input value="${(r[k]||"").replace(/"/g,'&quot;')}" data-idx="${i}" data-key="${k}" class="ocr-inp" style="width:100%;padding:3px 5px;border:1px solid #e2e8f0;border-radius:4px;font-size:11px;background:#fff"></td>`).join("")}
+        </tr>`;
+      }).join("")}</tbody>
+    </table>
+  </div>`;
+  html+=`<div style="margin-top:8px;display:flex;justify-content:space-between;align-items:center">
+    <span style="font-size:11px;color:#a0aec0">노란 배경 = 기존 호기 (업데이트). 체크 해제 시 제외.</span>
+    <button onclick="addOcrRow()" style="padding:5px 12px;border-radius:6px;border:1.5px dashed #c3dafe;background:#f0f8ff;color:#3182ce;font-size:11px;font-weight:600;cursor:pointer">+ 행 추가</button>
+  </div>`;
+  html+=`<details style="margin-top:8px"><summary style="font-size:11px;color:#a0aec0;cursor:pointer">OCR 원문 보기</summary>
+  <pre style="font-size:10px;color:#718096;background:#f7f9fc;padding:8px;border-radius:6px;max-height:120px;overflow:auto;white-space:pre-wrap;margin-top:6px">${text.replace(/</g,'&lt;')}</pre></details>`;
+
+  resultEl.innerHTML=html;
+  // 납기 우선 정렬
+  parsed.sort((a,b)=>(a.납||"9999").localeCompare(b.납||"9999"));
+  pendingPhotoRows=parsed;
+  document.getElementById("photo-confirm").style.display="inline-flex";
+}
+
+function addOcrRow(){
+  const tbl=document.getElementById("ocr-edit-tbl");
+  if(!tbl) return;
+  const idx=pendingPhotoRows.length;
+  pendingPhotoRows.push({호:"",프:"",납입처:"",정:"",기:"",자:"",자재입고:"",iocheck:"",납:"",턴:"",부:{}});
+  const cols=["프","납입처","정","기","호","자","자재입고","iocheck"];
+  const tr=document.createElement("tr");
+  tr.style.cssText="border-top:1px solid #c3dafe;background:#f0f8ff";
+  tr.innerHTML=`<td style="padding:4px;text-align:center"><input type="checkbox" checked data-idx="${idx}" class="ocr-chk" style="width:15px;height:15px;cursor:pointer"></td>`+
+    cols.map(k=>`<td style="padding:3px 4px"><input value="" data-idx="${idx}" data-key="${k}" class="ocr-inp" style="width:100%;padding:3px 5px;border:1px solid #c3dafe;border-radius:4px;font-size:11px;background:#fff" placeholder="입력"></td>`).join("");
+  tbl.querySelector("tbody").appendChild(tr);
+}
+
+function confirmPhotoImport(){
+  const tbl=document.getElementById("ocr-edit-tbl");
+  if(!tbl) return;
+  if(!Array.isArray(pendingPhotoRows)||!pendingPhotoRows.length) return;
+  const chks=tbl.querySelectorAll(".ocr-chk");
+  const inps=tbl.querySelectorAll(".ocr-inp");
+  // 입력값 수집
+  inps.forEach(inp=>{
+    const i=parseInt(inp.dataset.idx),k=inp.dataset.key;
+    if(pendingPhotoRows[i]) pendingPhotoRows[i][k]=inp.value.trim();
+  });
+  let maxId=Math.max(0,...panels.map(p=>p.id));
+  let added=0,updated=0;
+  chks.forEach(chk=>{
+    if(!chk.checked) return;
+    const i=parseInt(chk.dataset.idx);
+    const r=pendingPhotoRows[i];
+    if(!r||!r.호) return;
+    // IO CHECK에서 납기/턴온 계산
+    let 납기=r.납||"",턴온=r.턴||"";
+    if(r.iocheck){
+      const io=r.iocheck;
+      // M/D 형식이면 연도 추가
+      const ioDate=io.includes("-")?io:`${new Date().getFullYear()}-${io.replace(/\//g,"-").replace(/^(\d)-/,"0$1-").replace(/-(\d)$/,"-0$1")}`;
+      if(ioDate&&!isNaN(new Date(ioDate).getTime())){
+        납기=addDays(ioDate,-14);
+        턴온=addDays(ioDate,-1);
+      }
+    }
+    const ex=panels.find(p=>p.호기===r.호);
+    if(ex){
+      // 업데이트
+      const idx=panels.findIndex(p=>p.id===ex.id);
+      const u={...panels[idx]};
+      if(r.프) u.프로젝트=r.프;
+      if(r.정) u.정역=r.정;
+      if(r.기) u.기구제작=r.기;
+      if(r.자) u.자재=r.자;
+      if(r.자재입고) u.자재입고=r.자재입고;
+      if(r.납입처) u.비고=r.납입처;
+      if(납기) u.납기=납기;
+      if(턴온) u.턴온=턴온;
+      panels[idx]=recompute(u);
+      updated++;
+    } else {
+      // 신규
+      const p=buildPanel({id:++maxId,프:r.프||"",자:r.자||"",기:r.기||"",정:r.정||"",호:r.호,납:납기||"",턴:턴온||""});
+      if(r.자재입고) p.자재입고=r.자재입고;
+      if(r.납입처) p.비고=r.납입처;
+      panels.push(p);
+      added++;
+    }
+  });
+  console.log(`추가: ${added}건, 업데이트: ${updated}건`);
+  // 납기 우선 정렬
+  panels.sort((a,b)=>(a.납기||"9999").localeCompare(b.납기||"9999"));
+  isSyncing=true;
+  save();render();closePhoto();
+  setTimeout(()=>{isSyncing=false;},3000);
+  pendingPhotoRows=[];
+}
+
+/* ─────────────────── 불량현황 ─────────────────── */
+document.getElementById("btn-defect").addEventListener("click",()=>{document.getElementById("defect-modal").style.display="flex";renderDefectView();});
+document.getElementById("defect-modal").addEventListener("click",function(e){if(e.target===this)closeDefectModal();});
+document.getElementById("defect-filter").addEventListener("change",renderDefectView);
+function closeDefectModal(){document.getElementById("defect-modal").style.display="none";}
+
+function collectWorkerStats(){
+  const stats={};
+  panels.forEach(p=>{
+    const insp=p.검수||{};
+    const workers=insp.공정작업자||{};
+    BUPMOK.forEach(b=>{
+      const worker=workers[b];
+      if(!worker) return;
+      if(!stats[worker]) stats[worker]={담당:0,불량건:[],공정목록:[]};
+      stats[worker].담당++;
+      stats[worker].공정목록.push({proj:p.프로젝트,호기:p.호기,공정:b,panelId:p.id});
+      [1,2].forEach(n=>{
+        const sec=(insp["차"+n]&&insp["차"+n].공정비고&&insp["차"+n].공정비고[b])||{항목:[]};
+        (sec.항목||[]).forEach(item=>{
+          if(!item.내용) return;
+          stats[worker].불량건.push({proj:p.프로젝트,호기:p.호기,공정:b,차수:n+"차",내용:item.내용,완료:!!item.완료,panelId:p.id});
+        });
+      });
+    });
+  });
+  return stats;
+}
+
+function renderDefectView(){
+  const filter=document.getElementById("defect-filter").value;
+  const stats=collectWorkerStats();
+  const body=document.getElementById("defect-body");
+  const entries=Object.entries(stats).filter(([,v])=>v.담당>0);
+
+  if(entries.length===0){
+    body.innerHTML=`<div style="text-align:center;padding:40px;color:#a0aec0;font-size:14px">작업자가 배정된 공정이 없습니다</div>`;
+    return;
+  }
+
+  // 불량률 순 정렬
+  const sorted=entries.map(([name,v])=>{
+    let items=v.불량건;
+    if(filter==="open") items=items.filter(d=>!d.완료);
+    else if(filter==="done") items=items.filter(d=>d.완료);
+    const total=v.불량건.length,open=v.불량건.filter(d=>!d.완료).length;
+    const rate=v.담당>0?Math.round(total/v.담당*100):0;
+    return{name,담당:v.담당,total,open,rate,items};
+  }).sort((a,b)=>b.rate-a.rate||b.open-a.open);
+
+  const maxRate=Math.max(...sorted.map(s=>s.rate),1);
+
+  // 요약 카드
+  const totalWorkers=sorted.length;
+  const totalDefects=sorted.reduce((a,s)=>a+s.total,0);
+  const totalOpen=sorted.reduce((a,s)=>a+s.open,0);
+  let html=`<div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+    <div style="flex:1;min-width:100px;background:#ebf4ff;border:1px solid #c3dafe;border-radius:10px;padding:12px;text-align:center">
+      <div style="font-size:22px;font-weight:800;color:#3182ce">${totalWorkers}</div>
+      <div style="font-size:11px;color:#3182ce;font-weight:600">작업자</div>
+    </div>
+    <div style="flex:1;min-width:100px;background:#fefcbf;border:1px solid #f6e05e;border-radius:10px;padding:12px;text-align:center">
+      <div style="font-size:22px;font-weight:800;color:#975a16">${totalDefects}</div>
+      <div style="font-size:11px;color:#975a16;font-weight:600">총 불량</div>
+    </div>
+    <div style="flex:1;min-width:100px;background:#fff5f5;border:1px solid #feb2b2;border-radius:10px;padding:12px;text-align:center">
+      <div style="font-size:22px;font-weight:800;color:#c53030">${totalOpen}</div>
+      <div style="font-size:11px;color:#c53030;font-weight:600">미조치</div>
+    </div>
+  </div>`;
+
+  // 작업자 랭킹
+  sorted.forEach((s,idx)=>{
+    const rateColor=s.rate>=50?"#c53030":s.rate>=25?"#c05621":s.rate>0?"#975a16":"#276749";
+    const rateBg=s.rate>=50?"#fff5f5":s.rate>=25?"#fffaf0":s.rate>0?"#fffff0":"#f0fff4";
+    const barW=maxRate>0?Math.max(s.rate/maxRate*100,2):0;
+    const barColor=s.rate>=50?"#fc8181":s.rate>=25?"#f6ad55":s.rate>0?"#f6e05e":"#9ae6b4";
+    const medal=idx===0&&s.rate>0?"🥇 ":idx===1&&s.rate>0?"🥈 ":idx===2&&s.rate>0?"🥉 ":"";
+
+    html+=`<div style="background:#fff;border-radius:12px;border:1px solid ${s.open>0?"#feb2b2":"#e2e8f0"};margin-bottom:10px;overflow:hidden">
+      <div style="padding:12px 16px;background:${s.open>0?"#fff5f5":"#fafbfd"};border-bottom:1px solid #f0f4f8">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-size:15px;font-weight:700;color:#2d3748">${medal}👷 ${s.name}</span>
+            <span style="font-size:11px;color:#718096;background:#edf2f7;padding:2px 8px;border-radius:20px">담당 ${s.담당}건</span>
+            ${s.open>0?`<span style="font-size:11px;font-weight:700;color:#c53030;background:#fff;padding:2px 8px;border-radius:20px;border:1px solid #feb2b2">미조치 ${s.open}</span>`:""}
+          </div>
+          <div style="background:${rateBg};border:1px solid ${rateColor}30;border-radius:8px;padding:4px 12px;text-align:center">
+            <div style="font-size:18px;font-weight:800;color:${rateColor}">${s.rate}%</div>
+            <div style="font-size:9px;color:${rateColor};font-weight:600">불량률</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;height:8px;background:#edf2f7;border-radius:10px;overflow:hidden">
+            <div style="width:${barW}%;height:100%;background:${barColor};border-radius:10px;transition:width .5s"></div>
+          </div>
+          <span style="font-size:11px;color:#a0aec0;min-width:60px;text-align:right">${s.total} / ${s.담당}</span>
+        </div>
+      </div>
+      ${s.items.length>0?`<div style="padding:6px 12px;max-height:180px;overflow-y:auto">
+        ${s.items.map(d=>`
+          <div onclick="closeDefectModal();openModal(${d.panelId})" style="display:flex;align-items:flex-start;gap:8px;padding:7px;border-radius:8px;cursor:pointer;border-bottom:1px solid #f7f9fc;transition:background .1s" onmouseover="this.style.background='#f0f4ff'" onmouseout="this.style.background=''">
+            <span style="margin-top:1px;font-size:12px">${d.완료?"✅":"🔴"}</span>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-bottom:2px">
+                <span style="font-size:11px;font-weight:700;color:#2d3748">${d.proj}</span>
+                <span style="font-size:10px;color:#718096">${d.호기}</span>
+                <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:#eef2ff;color:#667eea;font-weight:600">${d.공정}</span>
+                <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:${d.차수==="1차"?"#fffaf0":"#fff5f5"};color:${d.차수==="1차"?"#c05621":"#c53030"};font-weight:600;border:1px solid ${d.차수==="1차"?"#fbd38d":"#feb2b2"}">${d.차수}</span>
+              </div>
+              <div style="font-size:11px;color:${d.완료?"#a0aec0":"#4a5568"};${d.완료?"text-decoration:line-through;":""}">${d.내용}</div>
+            </div>
+          </div>
+        `).join("")}
+      </div>`:""}
+    </div>`;
+  });
+
+  body.innerHTML=html;
+}
+
+function handleXL(file){
+  if(!file)return;
+  if(!file.name.match(/\.(xlsx|xls)$/i)){showXLErr("xlsx/xls 파일만 가능합니다");return;}
+  if(typeof XLSX==="undefined"){
+    // XLSX CDN 동적 로드
+    const s=document.createElement("script");
+    s.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+    s.onload=()=>processXL(file);
+    s.onerror=()=>showXLErr("SheetJS 로드 실패 (인터넷 연결 확인)");
+    document.head.appendChild(s);
+  } else {processXL(file);}
+}
+function showXLErr(msg){const e=document.getElementById("xl-err");e.textContent=msg;e.style.display="block";}
+function processXL(file){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:"array",cellDates:true});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+      const dataRows=rows.filter((r,i)=>i>=2&&r[1]&&String(r[1]).match(/^H\d/));
+      const fmtDate=v=>{if(!v)return"";if(v instanceof Date){const y=v.getFullYear(),m=String(v.getMonth()+1).padStart(2,"0"),d=String(v.getDate()).padStart(2,"0");return`${y}-${m}-${d}`;}const s=String(v).trim();if(/^\d{5}$/.test(s)){const d=new Date(Math.round((Number(s)-25569)*86400*1000));return`${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}-${String(d.getUTCDate()).padStart(2,"0")}`;}if(/\d{4}-\d{2}-\d{2}/.test(s))return s.slice(0,10);return s;};
+      const fmtVal=v=>(!v||String(v).trim()==="")?"-":String(v).trim();
+      let maxId=Math.max(0,...panels.map(p=>p.id));
+      dataRows.forEach(r=>{
+        const proj=String(r[1]||"").trim(),hogi=String(r[5]||"").trim();
+        const 납기=fmtDate(r[6]),턴온=fmtDate(r[7]);
+        const ex=panels.find(p=>`${p.프로젝트}_${p.호기}`===`${proj}_${hogi}`);
+        if(!ex){
+          panels.push(buildPanel({id:++maxId,프:proj,자:String(r[2]||"").trim(),기:String(r[3]||"").trim(),정:String(r[4]||"").trim(),호:hogi,납:납기,턴:턴온,부:{"P/W BOX":fmtVal(r[8]),"LODER":fmtVal(r[9]),"S/D":fmtVal(r[10]),"H/T상":fmtVal(r[11]),"H/T하":fmtVal(r[12]),"ROBOT":fmtVal(r[13])}}));
+        } else if(ex.납기!==납기||ex.턴온!==턴온){
+          const idx=panels.findIndex(p=>p.id===ex.id);
+          panels[idx]=recompute({...panels[idx],납기,턴온});
+        }
+      });
+      save(); render(); closeXL();
+    }catch(err){showXLErr("파싱 실패: "+err.message);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+/* ─── PDF 출력 ─── */
+document.getElementById("btn-pdf").addEventListener("click",()=>{
+  const d=new Date(),pad=n=>String(n).padStart(2,"0");
+  const ts=d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+  const filtered=getFiltered();
+  const pt=document.getElementById("print-title");
+  pt.textContent="판넬 생산현황  |  출력일: "+ts+"  |  총 "+filtered.length+"건 ("+
+    (filterNapgi!=="전체"?"납기: "+filterNapgi+" · ":"")+
+    (filterStatus!=="전체"?"상태: "+filterStatus+" · ":"")+
+    "평균 "+Math.round(filtered.reduce((a,p)=>a+p.progress,0)/(filtered.length||1))+"%"+
+    ")";
+  window.print();
+});
+
+/* ─────────────────── 초기 렌더 ─────────────────── */
+render();
+</script>
+</body>
+</html>
