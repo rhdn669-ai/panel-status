@@ -16,7 +16,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#667eea!import
 
 /* layout */
 #app{height:100vh;display:flex;flex-direction:column;overflow:hidden}
-#header{flex-shrink:0;background:#fff;border-bottom:1px solid #edf2f7;padding:0 16px;display:flex;align-items:center;justify-content:space-between;height:50px;box-shadow:0 1px 8px rgba(0,0,0,.06);z-index:100}
+#header{flex-shrink:0;background:#fff;border-bottom:1px solid #edf2f7;padding:0 16px;display:flex;align-items:center;justify-content:space-between;min-height:50px;flex-wrap:wrap;gap:6px;box-shadow:0 1px 8px rgba(0,0,0,.06);z-index:100}
+#header-btns{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
 #filters{flex-shrink:0;background:#f4f6f9;padding:8px 16px;border-bottom:1px solid #edf2f7;display:flex;flex-direction:column;gap:7px}
 #content{flex:1;overflow-y:auto;overflow-x:auto;padding:0 16px 12px}
 
@@ -102,12 +103,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#667eea!import
         <div id="hdr-update" style="font-size:10px;color:#c3dafe;margin-top:1px"></div>
       </div>
     </div>
-    <div style="display:flex;gap:6px;align-items:center">
-      <button id="btn-defect" class="btn" style="padding:5px 10px;font-size:12px;border:1.5px solid #fed7e2;background:#fff5f7;color:#b83280">🔎 불량현황</button>
-      <button id="btn-photo" class="btn" style="padding:5px 10px;font-size:12px;border:1.5px solid #c3dafe;background:#ebf4ff;color:#3182ce">📷 사진추가</button>
-      <button id="btn-reset" class="btn" style="padding:5px 10px;font-size:12px;border:1.5px solid #fbd38d;background:#fffff0;color:#975a16">🗑 초기화</button>
-      <button id="btn-pdf" class="btn" style="padding:5px 10px;font-size:12px;border:1.5px solid #fed7d7;background:#fff5f5;color:#c53030">🖨 PDF</button>
-      <button id="btn-table" class="btn" style="padding:5px 10px;font-size:12px;border:none;background:#667eea;color:#fff">목록</button>
+    <div id="header-btns">
+      <button id="btn-defect" class="btn" style="padding:5px 9px;font-size:12px;border:1.5px solid #fed7e2;background:#fff5f7;color:#b83280">🔎 불량</button>
+      <button id="btn-photo" class="btn" style="padding:5px 9px;font-size:12px;border:1.5px solid #c3dafe;background:#ebf4ff;color:#3182ce">📷 사진추가</button>
+      <button id="btn-reset" class="btn" style="padding:5px 9px;font-size:12px;border:1.5px solid #fbd38d;background:#fffff0;color:#975a16">🗑 초기화</button>
+      <button id="btn-pdf" class="btn" style="padding:5px 9px;font-size:12px;border:1.5px solid #fed7d7;background:#fff5f5;color:#c53030">🖨 PDF</button>
+      <button id="btn-table" class="btn" style="padding:5px 9px;font-size:12px;border:none;background:#667eea;color:#fff">목록</button>
     </div>
   </div>
   <div id="filters">
