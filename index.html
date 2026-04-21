@@ -102,6 +102,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#667eea!import
     <div style="display:flex;gap:6px;align-items:center">
       <button id="btn-defect" class="btn" style="padding:5px 10px;font-size:12px;border:1.5px solid #fed7e2;background:#fff5f7;color:#b83280">🔎 불량현황</button>
       <button id="btn-photo" class="btn" style="padding:5px 10px;font-size:12px;border:1.5px solid #c3dafe;background:#ebf4ff;color:#3182ce">📷 사진추가</button>
+      <button id="btn-reset" class="btn" style="padding:5px 10px;font-size:12px;border:1.5px solid #fbd38d;background:#fffff0;color:#975a16">🗑 초기화</button>
       <button id="btn-pdf" class="btn" style="padding:5px 10px;font-size:12px;border:1.5px solid #fed7d7;background:#fff5f5;color:#c53030">🖨 PDF</button>
       <button id="btn-table" class="btn" style="padding:5px 10px;font-size:12px;border:none;background:#667eea;color:#fff">목록</button>
     </div>
@@ -264,6 +265,21 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#667eea!import
       </div>
     </div>
     <div id="defect-body" style="padding:16px 24px;overflow-y:auto;max-height:70vh"></div>
+  </div>
+</div>
+
+<!-- 초기화 확인 모달 -->
+<div id="reset-modal" class="overlay" style="display:none" onclick="if(event.target===this)closeResetModal()">
+  <div class="modal-box" style="max-width:400px;padding:0" onclick="event.stopPropagation()">
+    <div style="padding:24px 24px 0;text-align:center">
+      <div style="font-size:36px;margin-bottom:12px">⚠️</div>
+      <div style="font-size:17px;font-weight:700;color:#c53030;margin-bottom:8px">전체 초기화</div>
+      <div style="font-size:13px;color:#4a5568;line-height:1.6">등록된 <strong>모든 프로젝트 데이터</strong>가 삭제됩니다.<br>Firebase에서 완전히 제거되며 <strong>복구할 수 없습니다.</strong></div>
+    </div>
+    <div style="padding:20px 24px;display:flex;gap:10px;justify-content:center">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeResetModal()">취소</button>
+      <button id="reset-confirm-btn" class="btn" style="flex:1;background:#c53030;color:#fff;border-color:#c53030" onclick="confirmReset()">전체 삭제</button>
+    </div>
   </div>
 </div>
 
@@ -1509,6 +1525,29 @@ document.getElementById("btn-pdf").addEventListener("click",()=>{
     ")";
   window.print();
 });
+
+/* ─────────────────── 전체 초기화 ─────────────────── */
+document.getElementById("btn-reset").addEventListener("click", () => {
+  document.getElementById("reset-modal").style.display = "flex";
+});
+function closeResetModal() {
+  document.getElementById("reset-modal").style.display = "none";
+}
+async function confirmReset() {
+  document.getElementById("reset-confirm-btn").disabled = true;
+  document.getElementById("reset-confirm-btn").textContent = "초기화 중...";
+  try {
+    await dbRef.remove();
+    try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+    panels = [];
+    render();
+    closeResetModal();
+  } catch(e) {
+    alert("초기화 실패: " + e.message);
+    document.getElementById("reset-confirm-btn").disabled = false;
+    document.getElementById("reset-confirm-btn").textContent = "전체 삭제";
+  }
+}
 
 /* ─────────────────── 초기 렌더 ─────────────────── */
 render();
