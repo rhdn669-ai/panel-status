@@ -94,7 +94,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#667eea!import
     <div style="display:flex;align-items:center;gap:10px">
       <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;font-size:14px">🏭</div>
       <div>
-        <div style="font-size:14px;font-weight:700;letter-spacing:-.2px">판넬 생산현황</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:14px;font-weight:700;letter-spacing:-.2px">판넬 생산현황</span>
+          <span id="ver-badge" style="font-size:10px;font-weight:600;color:#a0aec0;background:#f4f6f9;border:1px solid #e2e8f0;border-radius:10px;padding:1px 7px">v1.0.0</span>
+        </div>
         <div id="hdr-sub" style="font-size:10px;color:#a0aec0;margin-top:1px"></div>
         <div id="hdr-update" style="font-size:10px;color:#c3dafe;margin-top:1px"></div>
       </div>
@@ -285,6 +288,31 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#667eea!import
 
 <script>
 
+
+/* ─────────────────── 버전 / 자동 업데이트 ─────────────────── */
+const APP_VERSION = "1.0.0";
+document.getElementById("ver-badge").textContent = "v" + APP_VERSION;
+
+(function checkUpdate() {
+  const check = async () => {
+    try {
+      const res = await fetch(location.pathname + "?_=" + Date.now(), { cache: "no-store" });
+      const html = await res.text();
+      const m = html.match(/APP_VERSION\s*=\s*"([^"]+)"/);
+      if (m && m[1] !== APP_VERSION) showUpdateToast(m[1]);
+    } catch(e) {}
+  };
+  setTimeout(() => { check(); setInterval(check, 5 * 60 * 1000); }, 10000);
+})();
+
+function showUpdateToast(newVer) {
+  if (document.getElementById("update-toast")) return;
+  const t = document.createElement("div");
+  t.id = "update-toast";
+  t.style.cssText = "position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;background:#1a202c;color:#fff;border-radius:14px;padding:12px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.28);font-size:13px;white-space:nowrap";
+  t.innerHTML = `<span>🆕 새 버전 <strong>v${newVer}</strong> 업데이트됨</span><button onclick="location.reload()" style="background:#667eea;color:#fff;border:none;border-radius:8px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer">새로고침</button>`;
+  document.body.appendChild(t);
+}
 
 /* ─── 납기/턴온 인라인 편집 ─── */
 function editDate(field){
