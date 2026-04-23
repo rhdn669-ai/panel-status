@@ -97,7 +97,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#667eea!import
       <div>
         <div style="display:flex;align-items:center;gap:6px">
           <span style="font-size:14px;font-weight:700;letter-spacing:-.2px">판넬 생산현황</span>
-          <span id="ver-badge" style="font-size:10px;font-weight:600;color:#a0aec0;background:#f4f6f9;border:1px solid #e2e8f0;border-radius:10px;padding:1px 7px">v1.0.1</span>
+          <span id="ver-badge" style="font-size:10px;font-weight:600;color:#a0aec0;background:#f4f6f9;border:1px solid #e2e8f0;border-radius:10px;padding:1px 7px">v1.0.2</span>
         </div>
         <div id="hdr-sub" style="font-size:10px;color:#a0aec0;margin-top:1px"></div>
         <div id="hdr-update" style="font-size:10px;color:#c3dafe;margin-top:1px"></div>
@@ -291,7 +291,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#667eea!import
 
 
 /* ─────────────────── 버전 / 자동 업데이트 ─────────────────── */
-const APP_VERSION = "1.0.1";
+const APP_VERSION = "1.0.2";
 document.getElementById("ver-badge").textContent = "v" + APP_VERSION;
 
 (function checkUpdate() {
@@ -1083,6 +1083,61 @@ function resetPhotoModal(){
   pendingPhotoRows=[];
 }
 
+/* 이미지 전처리: 업스케일 + 그레이스케일 + 대비 향상 */
+async function preprocessImage(file,url){
+  const img=new Image();
+  img.src=url;
+  await new Promise(r=>{img.onload=r;});
+  const SCALE=img.width<2000?2:1;
+  const w=img.width*SCALE,h=img.height*SCALE;
+  const cv=document.createElement("canvas");
+  cv.width=w;cv.height=h;
+  const ctx=cv.getContext("2d");
+  ctx.drawImage(img,0,0,w,h);
+  const id=ctx.getImageData(0,0,w,h);
+  const d=id.data;
+  for(let i=0;i<d.length;i+=4){
+    const gray=Math.round(0.299*d[i]+0.587*d[i+1]+0.114*d[i+2]);
+    const c=Math.min(255,Math.max(0,(gray-128)*1.5+128));
+    d[i]=d[i+1]=d[i+2]=c;
+  }
+  ctx.putImageData(id,0,0);
+  return cv.toDataURL("image/png").split(",")[1];
+}
+
+/* 바운딩 박스 기반 라인 재구성 */
+function rebuildLinesFromWords(pages){
+  const words=[];
+  for(const page of pages){
+    for(const block of(page.blocks||[])){
+      for(const para of(block.paragraphs||[])){
+        for(const word of(para.words||[])){
+          const text=(word.symbols||[]).map(s=>s.text).join("");
+          if(!text.trim()) continue;
+          const verts=word.boundingBox?.vertices||[];
+          if(verts.length<4) continue;
+          const xs=verts.map(v=>v.x||0),ys=verts.map(v=>v.y||0);
+          words.push({text,x:Math.min(...xs),cy:(Math.min(...ys)+Math.max(...ys))/2,h:Math.max(...ys)-Math.min(...ys)});
+        }
+      }
+    }
+  }
+  if(!words.length) return null;
+  const avgH=words.reduce((s,w)=>s+w.h,0)/words.length;
+  const tol=avgH*0.55;
+  words.sort((a,b)=>a.cy-b.cy);
+  const rows=[];
+  for(const w of words){
+    const last=rows[rows.length-1];
+    if(last&&Math.abs(w.cy-last.cy)<tol) last.words.push(w);
+    else rows.push({cy:w.cy,words:[w]});
+  }
+  return rows.map(r=>{
+    r.words.sort((a,b)=>a.x-b.x);
+    return r.words.map(w=>w.text).join(" ");
+  }).join("\n");
+}
+
 async function handlePhoto(file){
   if(!file||!file.type.startsWith("image/")) return;
   const url=URL.createObjectURL(file);
@@ -1093,40 +1148,34 @@ async function handlePhoto(file){
   document.getElementById("photo-status-text").textContent="이미지 전처리 중...";
 
   try{
-    document.getElementById("photo-status-text").textContent="Google Vision API로 인식 중...";
-    // base64 변환: 파일 직접 읽기, 실패 시 캔버스 fallback
-    let b64;
-    try{
-      b64=await new Promise((res,rej)=>{
-        const reader=new FileReader();
-        reader.onload=()=>res(reader.result.split(",")[1]);
-        reader.onerror=rej;
-        reader.readAsDataURL(file);
-      });
-    }catch(e){
-      // fallback: 캔버스로 변환
-      const img=new Image();img.src=url;
-      await new Promise(r=>{img.onload=r;});
-      const cv=document.createElement("canvas");cv.width=img.width;cv.height=img.height;
-      cv.getContext("2d").drawImage(img,0,0);
-      b64=cv.toDataURL("image/png").split(",")[1];
-    }
-    console.log(`전송 크기: ${Math.round(b64.length/1024)}KB`);
+    // 1. 전처리: 업스케일 + 그레이스케일 + 대비 향상
+    const b64=await preprocessImage(file,url);
+    console.log(`전처리 후 크기: ${Math.round(b64.length/1024)}KB`);
 
-    // Google Vision API 호출 (TEXT_DETECTION + DOCUMENT_TEXT_DETECTION 동시)
+    document.getElementById("photo-status-text").textContent="Google Vision API로 인식 중...";
+
+    // 2. Vision API (DOCUMENT_TEXT_DETECTION만 사용 — 구조화 문서에 최적)
     const VISION_KEY="AIzaSyAMb5zWGgCINDaJ4tTEocXNMA_6sTAtnpA";
     const resp=await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`,{
       method:"POST",
       headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({requests:[{image:{content:b64},features:[{type:"DOCUMENT_TEXT_DETECTION"},{type:"TEXT_DETECTION"}],imageContext:{languageHints:["ko","en"]}}]})
+      body:JSON.stringify({requests:[{image:{content:b64},features:[{type:"DOCUMENT_TEXT_DETECTION",maxResults:1}],imageContext:{languageHints:["ko","en"]}}]})
     });
     const result=await resp.json();
-    if(result.error){throw new Error(result.error.message);}
-    if(result.responses&&result.responses[0]&&result.responses[0].error){throw new Error(result.responses[0].error.message);}
-    const allText=(result.responses&&result.responses[0]&&result.responses[0].fullTextAnnotation&&result.responses[0].fullTextAnnotation.text)||"";
+    if(result.error) throw new Error(result.error.message);
+    if(result.responses?.[0]?.error) throw new Error(result.responses[0].error.message);
+
+    const response=result.responses[0];
+    const pages=response?.fullTextAnnotation?.pages||[];
+    const rawText=response?.fullTextAnnotation?.text||"";
+
     document.getElementById("photo-status").style.display="none";
-    console.log("=== Google Vision OCR 결과 ===\n"+allText);
-    parsePhotoText(allText);
+
+    // 3. 바운딩박스 기반 라인 재구성 (실패 시 원문 fallback)
+    const bbText=pages.length?rebuildLinesFromWords(pages):null;
+    const finalText=bbText||rawText;
+    console.log("=== 바운딩박스 재구성 결과 ===\n"+finalText);
+    parsePhotoText(finalText);
   }catch(err){
     console.error("OCR 에러:",err);
     document.getElementById("photo-status").style.display="none";
