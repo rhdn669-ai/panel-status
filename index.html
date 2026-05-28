@@ -97,7 +97,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#667eea!import
       <div>
         <div style="display:flex;align-items:center;gap:6px">
           <span style="font-size:14px;font-weight:700;letter-spacing:-.2px">판넬 생산현황</span>
-          <span id="ver-badge" style="font-size:10px;font-weight:600;color:#a0aec0;background:#f4f6f9;border:1px solid #e2e8f0;border-radius:10px;padding:1px 7px">v1.0.4</span>
+          <span id="ver-badge" style="font-size:10px;font-weight:600;color:#a0aec0;background:#f4f6f9;border:1px solid #e2e8f0;border-radius:10px;padding:1px 7px">v1.0.5</span>
         </div>
         <div id="hdr-sub" style="font-size:10px;color:#a0aec0;margin-top:1px"></div>
         <div id="hdr-update" style="font-size:10px;color:#c3dafe;margin-top:1px"></div>
@@ -291,7 +291,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#667eea!import
 
 
 /* ─────────────────── 버전 / 자동 업데이트 ─────────────────── */
-const APP_VERSION = "1.0.4";
+const APP_VERSION = "1.0.5";
 document.getElementById("ver-badge").textContent = "v" + APP_VERSION;
 
 (function checkUpdate() {
@@ -552,10 +552,12 @@ const dotsHtml=(bs,ms)=>{
 /* ─────────────────── 필터링 ─────────────────── */
 const isDoneNapgiSelected=()=>filterNapgi!=="전체"&&panels.filter(p=>p.납기===filterNapgi).every(p=>p.overallStatus==="출고완료"||p.overallStatus==="출고숨김");
 const getFiltered=()=>panels.filter(p=>{
-  if(p.overallStatus==="출고숨김"&&!isDoneNapgiSelected()&&filterStatus!=="출고숨김") return false;
+  const isShipped=p.overallStatus==="출고완료"||p.overallStatus==="출고숨김";
+  // 출고완료/출고숨김은 hideShipped일 때 숨김 (단 해당 상태 필터·납기완료 루트 선택 시엔 표시)
+  if(hideShipped&&isShipped&&!isDoneNapgiSelected()&&filterStatus!=="출고완료"&&filterStatus!=="출고숨김") return false;
   if(filterStatus!=="전체"&&p.overallStatus!==filterStatus) return false;
   if(filterNapgi!=="전체"&&p.납기!==filterNapgi) return false;
-  if(showUrgent&&(getDday(p.납기)>7||p.overallStatus==="출고완료"||p.overallStatus==="출고숨김")) return false;
+  if(showUrgent&&(getDday(p.납기)>7||isShipped)) return false;
   if(searchQ&&!`${p.프로젝트} ${p.호기} ${p.자재} ${p.기구제작} ${p.비고||""} ${p.정역}`.toLowerCase().includes(searchQ.toLowerCase())) return false;
   return true;
 });
