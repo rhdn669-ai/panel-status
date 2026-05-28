@@ -97,7 +97,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#667eea!import
       <div>
         <div style="display:flex;align-items:center;gap:6px">
           <span style="font-size:14px;font-weight:700;letter-spacing:-.2px">판넬 생산현황</span>
-          <span id="ver-badge" style="font-size:10px;font-weight:600;color:#a0aec0;background:#f4f6f9;border:1px solid #e2e8f0;border-radius:10px;padding:1px 7px">v1.0.2</span>
+          <span id="ver-badge" style="font-size:10px;font-weight:600;color:#a0aec0;background:#f4f6f9;border:1px solid #e2e8f0;border-radius:10px;padding:1px 7px">v1.0.4</span>
         </div>
         <div id="hdr-sub" style="font-size:10px;color:#a0aec0;margin-top:1px"></div>
         <div id="hdr-update" style="font-size:10px;color:#c3dafe;margin-top:1px"></div>
@@ -291,7 +291,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#667eea!import
 
 
 /* ─────────────────── 버전 / 자동 업데이트 ─────────────────── */
-const APP_VERSION = "1.0.2";
+const APP_VERSION = "1.0.4";
 document.getElementById("ver-badge").textContent = "v" + APP_VERSION;
 
 (function checkUpdate() {
@@ -1190,6 +1190,9 @@ function addDays(dateStr,days){
 }
 
 function parsePhotoText(text){
+  // 날짜 표기 정규화: "4 / 27", "4.27", "4-27", 전각 구분자 등을 모두 "4/27"로 통일.
+  // (구분자/공백 오인식으로 날짜 1개가 누락되면 dates[] 위치가 밀려 IO CHECK 등 뒤 칸이 전부 어긋남)
+  text=text.replace(/(\d{1,2})\s*[\/／.．·－\-]\s*(\d{1,2})/g,"$1/$2");
   const lines=text.split("\n").map(l=>l.trim()).filter(l=>l.length>0);
   const parsed=[];
   const year=new Date().getFullYear();
@@ -1197,11 +1200,11 @@ function parsePhotoText(text){
 
   // 헤더 스킵
   let i=0;
-  while(i<lines.length&&!lines[i].match(/YS[-.]?TEPS/i)) i++;
+  while(i<lines.length&&!lines[i].match(/YS[\s\-.]*TEPS/i)) i++;
 
   while(i<lines.length){
     const line=lines[i];
-    const tepsM=line.match(/YS[-.]?TEPS(\d+)/i);
+    const tepsM=line.match(/YS[\s\-.]*TEPS\s*(\d+)/i);
     if(!tepsM){i++;continue;}
 
     const 호기=tepsM[1];
@@ -1211,7 +1214,7 @@ function parsePhotoText(text){
     const rawVals=[];
     if(inlineName) rawVals.push(inlineName);
     i++;
-    while(i<lines.length&&!lines[i].match(/YS[-.]?TEPS/i)){
+    while(i<lines.length&&!lines[i].match(/YS[\s\-.]*TEPS/i)){
       if(lines[i].length>0) rawVals.push(lines[i]);
       i++;
     }
